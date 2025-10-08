@@ -1,0 +1,1 @@
+export {TemplatesPage as default} from '@/pages/template-page'

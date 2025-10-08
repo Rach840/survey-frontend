@@ -1,0 +1,1 @@
+export {CreateSurveyPage as default} from '@/pages/surveys-page'
