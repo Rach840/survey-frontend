@@ -3,18 +3,13 @@ import {Bell, FileStack, FileText, Settings} from "lucide-react";
 export const items = [
     {
         title: "Анкеты",
-        url: "/survey",
+        url: "/admin/survey",
         icon: FileText,
     },
     {
         title: "Шаблоны",
-        url: "/templates",
+        url: "/admin/templates",
         icon: FileStack,
-    },
-    {
-        title: "Уведомления",
-        url: "#",
-        icon: Bell,
     },
     {
         title: "Настройки",

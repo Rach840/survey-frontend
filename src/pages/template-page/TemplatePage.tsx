@@ -15,7 +15,7 @@ export function TemplatesPage() {
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Шаблоны анкет</h1>
                     <p className="text-gray-600">Создавайте и управляйте шаблонами для анкет</p>
                 </div>
-                <Link href="/templates/create">
+                <Link href="/admin/templates/create">
                     <Button className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]">
                         <Plus className="w-4 h-4 mr-2" />
                         Создать шаблон
