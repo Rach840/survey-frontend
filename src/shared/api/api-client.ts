@@ -1,7 +1,7 @@
 
 export async function apiFetch<T>(
     path: string,
-    init: RequestInit & { auth?: string } = {},
+    init: RequestInit & { auth?: boolean } = {},
 ): Promise<T> {
     const { auth, ...rest } = init;
     const res = await fetch(process.env.NEXT_PUBLIC_API_URL + path, {

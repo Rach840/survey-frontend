@@ -16,7 +16,7 @@ export function CreateTemplatePage() {
         title: "",
         sections: [],
     })
-
+    console.log(template)
     const addSection = () => {
         const newSection: Section = {
             id: Date.now().toString(),

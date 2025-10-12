@@ -1,3 +1,4 @@
+'use client'
 import {Card, CardContent} from "@/shared/ui/card";
 import {Button} from "@/shared/ui/button";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/shared/ui/select";
@@ -5,6 +6,7 @@ import {surveys} from "@/entities/surveys/model/surveys";
 import {Clock, MessageSquare, Plus} from "lucide-react";
 import Link from "next/link";
 import {Input} from "@/shared/ui/input";
+import {useMeQuery} from "@/entities/user/model/meQuery";
 
 export function SurveyPage() {
 

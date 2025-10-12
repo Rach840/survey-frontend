@@ -11,7 +11,10 @@ import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 import {ChevronUp, User2} from "lucide-react";
 import {items} from "@/widgets/sidebar/links";
 import Image from 'next/image'
+import {useMeQuery} from "@/entities/user/model/meQuery";
 export function AppSidebar() {
+    const { data: user, isLoading } = useMeQuery()
+    console.log('asdasd',user)
     return (
             <Sidebar>
                 <SidebarHeader >
@@ -52,7 +55,7 @@ export function AppSidebar() {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <SidebarMenuButton size='lg' className='text-xl'>
-                                        <User2 className='!size-8' /> Пользователь
+                                        <User2 className='!size-8' /> {isLoading ? "Загрузка" : user?.full_name}
                                         <ChevronUp className="ml-auto" />
                                     </SidebarMenuButton>
                                 </DropdownMenuTrigger>

@@ -1,27 +1,31 @@
 'use client'
-import {useState} from "react";
+import {useActionState, useEffect, useState} from "react";
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/shared/ui/card";
-import {Eye, EyeOff, LogIn,Lock, User} from "lucide-react";
 import {Input} from "@/shared/ui/input";
 import {Button} from "@/shared/ui/button";
 import Image from "next/image"
-import Link from "next/link";
-import {useSignIn} from "@/features/auth/sign-in/model";
+import { zodResolver } from "@hookform/resolvers/zod"
+import {registerSchema, RegisterSchema} from "@/pages/register-page/schema";
 import {Controller, useForm} from "react-hook-form";
-import {loginSchema, LoginSchema} from "@/pages/login-page/schema/login-schema";
-import {zodResolver} from "@hookform/resolvers/zod";
-import {Field, FieldError, FieldGroup, FieldLabel} from "@/shared";
+import {Field, FieldError, FieldGroup, FieldLabel} from "@/shared/ui/field";
+import Link from "next/link";
+import {registerAction} from "@/pages/register-page/api/registerAction";
 import {useRouter} from "next/navigation";
-export  function LoginForm() {
-
+export  function RegisterForm() {
     const router = useRouter()
-    const {mutate} = useSignIn()
-    const loginForm = useForm<LoginSchema>({
-        resolver: zodResolver(loginSchema),
+    const registerForm = useForm<RegisterSchema>({
+        resolver: zodResolver(registerSchema),
         mode: "onTouched",
     });
+    const [registerState, registerFormAction] = useActionState(registerAction, {});
+    useEffect(() => {
+        if (registerState == 201) {
+            setTimeout(()=> {
+                router.replace("/login")
+            },2000)
 
-    
+        }
+    }, [registerState, router]);
     return (
         <div className="max-w-md mx-auto">
             <Card className="bg-[#ffffff] rounded-3xl shadow-xl border-0">
@@ -39,17 +43,39 @@ export  function LoginForm() {
                     <CardTitle className="text-2xl font-bold text-[#1f2937]">Вход в систему</CardTitle>
                     <CardDescription className="text-[#6b7280]">Введите ваши учетные данные</CardDescription>
                 </CardHeader>
+
                 <CardContent>
-                    <form action={()=> mutate(loginForm.getValues())} id="form-reg" className=" space-y-6">
+                    <form action={registerFormAction} id="form-reg" className=" space-y-6">
                         {/* Email/Login field */}
                         <FieldGroup className={""}>
                             <Controller
+                                name="full_name"
+                                control={registerForm.control}
+                                render={({ field, fieldState }) => (
+                                    <Field className={"col-span-1"} data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="form-reg-fullname">
+                                            Введите фио
+                                        </FieldLabel>
+                                        <Input
+                                            {...field}
+                                            id="form-reg-fullname"
+                                            aria-invalid={fieldState.invalid}
+                                            placeholder="Введите ФИО"
+                                            autoComplete="name"
+                                        />
+                                        {fieldState.invalid && (
+                                            <FieldError errors={[fieldState.error]} />
+                                        )}
+                                    </Field>
+                                )}
+                            />
+                            <Controller
                                 name="email"
-                                control={loginForm.control}
+                                control={registerForm.control}
                                 render={({ field, fieldState }) => (
                                     <Field data-invalid={fieldState.invalid}>
                                         <FieldLabel htmlFor="form-reg-email">
-                                            Введите электронную почту
+Введите электронную почту
                                         </FieldLabel>
                                         <Input
                                             {...field}
@@ -66,9 +92,11 @@ export  function LoginForm() {
                                     </Field>
                                 )}
                             />
+                        </FieldGroup>
+                        <FieldGroup className={"grid grid-cols-2"}>
                             <Controller
                                 name="password"
-                                control={loginForm.control}
+                                control={registerForm.control}
                                 render={({ field, fieldState }) => (
                                     <Field data-invalid={fieldState.invalid}>
                                         <FieldLabel htmlFor="form-reg-fullname">
@@ -82,6 +110,29 @@ export  function LoginForm() {
                                             placeholder=""
                                             autoComplete="off"
 
+                                        />
+                                        {fieldState.invalid && (
+                                            <FieldError errors={[fieldState.error]} />
+                                        )}
+                                    </Field>
+                                )}
+                            />
+                            <Controller
+                                name="password_confirm"
+                                control={registerForm.control}
+                                render={({ field, fieldState }) => (
+                                    <Field data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="form-reg-email">
+                                            Повторите пароль
+                                        </FieldLabel>
+                                        <Input
+                                            {...field}
+                                            id="form-reg-email"
+                                            aria-invalid={fieldState.invalid}
+                                            type={"password"}
+
+                                            placeholder=""
+                                            autoComplete="email"
                                         />
                                         {fieldState.invalid && (
                                             <FieldError errors={[fieldState.error]} />
@@ -103,7 +154,7 @@ export  function LoginForm() {
                     <Field orientation="horizontal">
 
                         <Button variant={"form"} type="submit" form="form-reg">
-                            Войти
+                            Зарегистрироваться
                         </Button>
                     </Field>
                 </CardFooter>
