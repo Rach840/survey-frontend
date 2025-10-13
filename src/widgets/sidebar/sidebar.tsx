@@ -12,9 +12,11 @@ import {ChevronUp, User2} from "lucide-react";
 import {items} from "@/widgets/sidebar/links";
 import Image from 'next/image'
 import {useMeQuery} from "@/entities/user/model/meQuery";
+import {Button} from "@/shared";
+import {useSignOut} from "@/features/auth/sign-out/model";
 export function AppSidebar() {
     const { data: user, isLoading } = useMeQuery()
-    console.log('asdasd',user)
+    const {mutate: signOut} = useSignOut()
     return (
             <Sidebar>
                 <SidebarHeader >
@@ -65,7 +67,10 @@ export function AppSidebar() {
                                 >
 
                                     <DropdownMenuItem>
-                                        <span>Выйти</span>
+                                        <Button onClick={signOut} >
+                                            <span>Выйти</span>
+                                        </Button>
+
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

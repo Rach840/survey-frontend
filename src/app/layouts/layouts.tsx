@@ -3,19 +3,17 @@ import SidebarMenu from "@/widgets/sidebar";
 
 import {usePathname} from "next/navigation";
 import {SidebarProvider, SidebarTrigger} from "@/shared/ui/sidebar";
-
-export function SidebarLayouts({children} : {children:React.ReactNode}) {
-    const pathname = usePathname()
-    console.log(pathname)
-    if (pathname == '/login' || pathname == '/register') {
-        return (
-            <main className="w-full">
-
-                {children}
-            </main>
-        )
-    }else {
-        return (
+import { redirect } from 'next/navigation'
+import {getMe} from "@/entities/user/api/getMe";
+import {useMeQuery} from "@/entities/user/model/meQuery";
+export  function AdminLayouts({children} : {children:React.ReactNode}) {
+        const {data: user, isLoading} = useMeQuery()
+    console.log(user)
+        if (!isLoading && !user) {
+            console.log(!isLoading && !user)
+            redirect('/login') // абсолютный редирект на сервере
+        }
+return (
 
             <SidebarProvider>
                 <SidebarMenu />
@@ -25,6 +23,6 @@ export function SidebarLayouts({children} : {children:React.ReactNode}) {
                 </main>
             </SidebarProvider>
         )
-    }
+
 
 }

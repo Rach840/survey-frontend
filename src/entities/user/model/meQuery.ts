@@ -10,6 +10,7 @@ export const meQueryOptions = () =>
         // профиль меняется редко — делаем «долгую свежесть»
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
+        retry: false,
     })
 
 export function useMeQuery() {

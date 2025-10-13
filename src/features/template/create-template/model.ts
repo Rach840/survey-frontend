@@ -7,7 +7,7 @@ export function useTemplateCreate() {
     const qc = useQueryClient()
     const router = useRouter()
     return useMutation({
-        mutationFn: async (payload: { title: string,description: string, version: string, sections: string }) => {
+        mutationFn: async (payload: { title: string,description: string, version: number, sections: string }) => {
             console.log(payload)
             const r = await fetch('/api/template/create', {
                 method: 'POST',

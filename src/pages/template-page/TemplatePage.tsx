@@ -5,9 +5,15 @@ import { Card, CardContent } from "@/shared/ui/card"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import {templates} from "@/entities/templates/model/templates";
+import {getTemplatesByMe} from "@/entities/templates/model/templateQuery";
 
 
 export function TemplatesPage() {
+    const {data, isLoading} = getTemplatesByMe()
+    if (!isLoading){
+        console.log('dasdasd',data[0])
+
+    }
     return (
         <div className="p-8">
             <div className="mb-8 flex items-center justify-between">
@@ -25,26 +31,26 @@ export function TemplatesPage() {
 
             {/* Templates Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {templates.map((template) => (
+                {data?.map((template) => (
                     <Card key={template.id} className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-6">
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">{template.title}</h3>
                             <p className="text-gray-600 mb-4">{template.description}</p>
 
                             <div className="flex gap-4 mb-4 text-sm text-gray-500">
-                                <span>{template.sections} секций</span>
-                                <span>{template.fields} полей</span>
+                                <span>{template.draft_schema_json.length} секций</span>
+                                <span>{template.draft_schema_json.map(item=> item.fields.length)} полей</span>
                             </div>
 
-                            <div className="text-xs text-gray-400 mb-4">Создан: {template.createdAt}</div>
+                            <div className="text-xs text-gray-400 mb-4">Создан: {template.published_at}</div>
 
                             <div className="flex gap-2">
-                                <Link href={`/templates/create`} className="flex-1">
+                                <Link href={`/admin/templates/create`} className="flex-1">
                                     <Button variant="outline" className="w-full bg-transparent">
                                         Редактировать
                                     </Button>
                                 </Link>
-                                <Link href="/survey/create">
+                                <Link href="/admin/survey/create">
                                     <Button variant="outline" size="icon" title="Создать анкету из шаблона">
                                         <Plus className="w-4 h-4" />
                                     </Button>

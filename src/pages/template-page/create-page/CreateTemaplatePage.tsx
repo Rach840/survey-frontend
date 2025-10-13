@@ -8,12 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
 import { Checkbox } from "@/shared/ui/checkbox"
 import { Plus, Trash2, GripVertical, Save } from "lucide-react"
+import {Textarea} from "@/shared";
+import {useTemplateCreate} from "@/features/template/create-template/model";
 
 
 
 export function CreateTemplatePage() {
     const [template, setTemplate] = useState<Template>({
         title: "",
+        description: "",
+        version: 1,
         sections: [],
     })
     const addSection = () => {
@@ -26,7 +30,13 @@ export function CreateTemplatePage() {
         }
         setTemplate({ ...template, sections: [...template.sections, newSection] })
     }
+    const {mutate} = useTemplateCreate()
 
+    function HandleSubmit() {
+        const template =  parseTemplate()
+        const payload = {...template,sections:JSON.stringify(template.sections)}
+        mutate(payload)
+    }
     const removeSection = (sectionId: string) => {
         setTemplate({
             ...template,
@@ -146,9 +156,12 @@ export function CreateTemplatePage() {
         })
     }
 
-    const exportJSON = () => {
-        const exportData = {
+    const parseTemplate = () => {
+         return  {
             title: template.title,
+             description: template.description,
+             version: template.version,
+
             sections: template.sections.map((s) => ({
                 code: s.code,
                 title: s.title,
@@ -163,6 +176,10 @@ export function CreateTemplatePage() {
                 })),
             })),
         }
+    }
+
+    const exportJSON = () => {
+     const exportData=    parseTemplate()
         console.log(JSON.stringify(exportData, null, 2))
         alert("JSON выведен в консоль")
     }
@@ -173,13 +190,14 @@ export function CreateTemplatePage() {
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Конструктор шаблона анкеты</h1>
-                    <p className="text-gray-600">Создайте структуру анкеты с секциями и полями</p>
+                    <p className="text-gray-600">
+                        Создайте структуру анкеты с секциями и полями</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={exportJSON}>
                         Экспорт JSON
                     </Button>
-                    <Button className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]">
+                    <Button onClick={HandleSubmit} className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]">
                         <Save className="w-4 h-4 mr-2" />
                         Сохранить
                     </Button>
@@ -191,7 +209,7 @@ export function CreateTemplatePage() {
                 <CardHeader>
                     <CardTitle>Основная информация</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="title">Название шаблона</Label>
@@ -202,6 +220,35 @@ export function CreateTemplatePage() {
                                 placeholder="Например: Анкета студента v3"
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Описание:</Label>
+                        <Textarea
+
+                            className="w-full"
+                            value={template.description}
+                            onChange={(e) =>
+                            {setTemplate({
+                                ...template,
+                                description: e.target.value
+                            })}
+                            }
+                        />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <Label>Версия:</Label>
+                        <Input
+                            type="number"
+                            className="w-20"
+                            value={template.version || 1}
+                            onChange={(e) =>
+                            {setTemplate({
+                                    ...template,
+                                    version: e.target.value
+                                })}
+                            }
+                        />
                     </div>
                 </CardContent>
             </Card>

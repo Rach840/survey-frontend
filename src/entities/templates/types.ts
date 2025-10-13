@@ -21,5 +21,7 @@ interface Section {
 
 interface Template {
     title: string
+    description: string
+    version: number
     sections: Section[]
 }

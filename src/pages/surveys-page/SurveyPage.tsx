@@ -129,7 +129,7 @@ export function SurveyPage() {
             </div>
 
             {/* Floating Action Button */}
-            <Link href="/survey/create">
+            <Link href="/admin/survey/create">
                 <Button
                     size="lg"
                     className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]"

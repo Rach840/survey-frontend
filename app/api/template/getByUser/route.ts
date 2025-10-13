@@ -1,22 +1,17 @@
-import { NextResponse } from 'next/server';
 import {cookies} from "next/headers";
+import {NextResponse} from "next/server";
 
-
-export async function POST(req: Request) {
-
-    const payload = await req.json()
-
+export async function GET() {
     const jar = await cookies()
     const access = jar.get('__Host-access')?.value
     if (!access) return new Response('Unauthorized', { status: 401 })
-    const r = await fetch(`http://localhost:8080/api/template/create`, {
-        method: 'POST',
+    const r = await fetch(`http://localhost:8080/api/template/getAllByUser`, {
+        method: 'GET',
         headers: {  'content-type': 'application/json' ,Authorization: `Bearer ${access}` },
-        body: JSON.stringify(payload),
         cache: 'no-store',
     })
-    console.log('asdfsdf',r)
     if (!r.ok) return new Response(await r.text(), { status: r.status })
-    const res = NextResponse.json({ ok: true })
-    return res
+    const res =await   r.json()
+    console.log(res)
+    return Response.json(res)
 }

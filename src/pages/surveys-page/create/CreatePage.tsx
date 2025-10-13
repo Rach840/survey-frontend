@@ -36,6 +36,7 @@ export function CreateSurveyPage() {
         setParticipants([...participants, newParticipant])
     }
 
+
     const removeParticipant = (id: string) => {
         setParticipants(participants.filter((p) => p.id !== id))
     }

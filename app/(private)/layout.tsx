@@ -1,0 +1,1 @@
+export {AdminLayouts as default} from '@/app/layouts/layouts'
