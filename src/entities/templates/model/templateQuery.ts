@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import {getTemplateByMe} from "@/entities/templates/api/getTemplateByMe";
+import { getTemplateByMe } from "@/entities/templates/api/getTemplateByMe"
 
-export const templateByMe = ['templateByMe'] as const
+export const templatesByMeKey = ['templateByMe'] as const
 
-export const getTemplatesByMe = () =>
+export const useTemplatesByMe = () =>
     useQuery({
-        queryKey: [templateByMe],
+        queryKey: templatesByMeKey,
         queryFn: getTemplateByMe,
         // профиль меняется редко — делаем «долгую свежесть»
         staleTime: 5 * 300 * 1000,

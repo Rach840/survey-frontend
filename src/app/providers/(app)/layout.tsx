@@ -1,5 +1,4 @@
 'use server'
-// src/app/(app)/layout.tsx  (Server Component)
 import { HydrationBoundary, dehydrate, QueryClient } from '@tanstack/react-query'
 import { meQueryOptions } from '@/entities/user/model/meQuery'
 import { cookies } from 'next/headers'

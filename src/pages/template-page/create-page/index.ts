@@ -1,1 +1,1 @@
-export * from './CreateTemaplatePage'
+export * from './CreateTemplatePage'

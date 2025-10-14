@@ -1,10 +1,7 @@
 'use client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
-import {AutoRefresh} from "@/app/providers/auto-refresh";
-
 export function Providers({ children }: { children: React.ReactNode }) {
-    // создаём QueryClient один раз на клиенте
     const [client] = useState(() => new QueryClient())
 
     return (

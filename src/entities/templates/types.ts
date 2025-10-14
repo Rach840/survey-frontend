@@ -1,27 +1,38 @@
-type FieldType = "text" | "date" | "select_one" | "select_multiple" | "number"
+export type TemplateFieldType = "text" | "date" | "select_one" | "select_multiple" | "number"
 
-interface Field {
-    id: string
+export interface TemplateFieldOption {
     code: string
-    type: FieldType
     label: string
-    required: boolean
-    options?: { code: string; label: string }[]
 }
 
-interface Section {
+export interface TemplateField {
+    id: string
+    code: string
+    type: TemplateFieldType
+    label: string
+    required: boolean
+    options?: TemplateFieldOption[]
+}
+
+export interface TemplateSection {
     id: string
     code: string
     title: string
     repeatable: boolean
     min?: number
     max?: number
-    fields: Field[]
+    fields: TemplateField[]
 }
 
-interface Template {
+export interface Template {
+    id: number
+    owner_id: number
     title: string
     description: string
     version: number
-    sections: Section[]
+    status: string
+    draft_schema_json: TemplateSection[]
+    published_schema_json: TemplateSection[] | null
+    updated_at: string
+    published_at: string | null
 }

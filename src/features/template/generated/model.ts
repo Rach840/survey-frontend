@@ -10,6 +10,7 @@ export type FormFieldDef = {
     type: FieldType;
     label: string;
     required?: boolean;
+    placeholder?: string;
     options?: { value: string; label: string }[]; // для select
 };
 
@@ -62,7 +63,7 @@ export function buildZodShape(formDef: DynamicFormDef) {
 
             if (field.required && field.type !== "checkbox") {
                 // чекбоксы чаще всего не обязательные; при надобности можно добавить required
-                zField = (zField as any).refine((v: any) => v !== undefined && v !== "" && v !== null, {
+                zField = zField.refine((v: unknown) => v !== undefined && v !== "" && v !== null, {
                     message: "Обязательное поле",
                 });
             }
@@ -77,7 +78,7 @@ export function buildZodShape(formDef: DynamicFormDef) {
 }
 
 export function buildDefaultValues(formDef: DynamicFormDef) {
-    const defaults: Record<string, any> = {};
+    const defaults: Record<string, Record<string, unknown>> = {};
     for (const section of formDef.sections) {
         defaults[section.code] = {};
         for (const field of section.fields) {

@@ -10,6 +10,11 @@ import { Textarea } from "@/shared/ui/textarea"
 import { Plus, Trash2, Users, Bot, Save, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
+import { useTemplatesByMe } from "@/entities/templates/model/templateQuery"
+import { useSurveyCreate } from "@/features/survey/create-survey"
+import type { CreateSurveyPayload } from "@/features/survey/create-survey"
+import { toast } from "sonner"
+import { Skeleton } from "@/shared/ui/skeleton"
 
 interface Participant {
     id: string
@@ -21,11 +26,14 @@ interface Participant {
 export function CreateSurveyPage() {
     const [surveyTitle, setSurveyTitle] = useState("")
     const [surveyDescription, setSurveyDescription] = useState("")
-    const [selectedTemplate, setSelectedTemplate] = useState("")
+    const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
     const [invitationMode, setInvitationMode] = useState<"manual" | "bot">("manual")
     const [participants, setParticipants] = useState<Participant[]>([])
     const [maxParticipants, setMaxParticipants] = useState(10)
-
+    const { data, isLoading } = useTemplatesByMe()
+    const templates = data ?? []
+    const isTemplatesLoading = isLoading && templates.length === 0
+    const { mutateAsync, isPending } = useSurveyCreate()
     const addParticipant = () => {
         const newParticipant: Participant = {
             id: Date.now().toString(),
@@ -45,20 +53,48 @@ export function CreateSurveyPage() {
         setParticipants(participants.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
     }
 
-    const handleSubmit = () => {
-        const surveyData = {
-            title: surveyTitle,
-            description: surveyDescription,
-            template: selectedTemplate,
-            invitationMode,
-            ...(invitationMode === "manual" ? { participants } : { maxParticipants }),
+    const handleSubmit = async () => {
+        if (!selectedTemplateId) {
+            toast.error("Выберите шаблон анкеты")
+            return
         }
-        console.log("[v0] Survey data:", surveyData)
-        alert("Анкета создана! Данные выведены в консоль")
+
+        const cleanedParticipants = participants
+            .map(({ email, firstName, lastName }) => ({
+                email: email.trim(),
+                firstName: firstName.trim() || undefined,
+                lastName: lastName.trim() || undefined,
+            }))
+            .filter((participant) => participant.email)
+
+        if (invitationMode === "manual" && cleanedParticipants.length === 0) {
+            toast.error("Добавьте хотя бы одного участника")
+            return
+        }
+
+        const safeMaxParticipants = Math.max(1, maxParticipants)
+
+        const payload: CreateSurveyPayload = {
+            title: surveyTitle.trim(),
+            description: surveyDescription.trim() || undefined,
+            templateId: Number(selectedTemplateId),
+            invitationMode,
+            ...(invitationMode === "manual"
+                ? { participants: cleanedParticipants }
+                : { maxParticipants: safeMaxParticipants }),
+        }
+
+        try {
+            await mutateAsync(payload)
+            toast.success("Анкета создана")
+        } catch (error) {
+            console.error(error)
+            toast.error("Не удалось создать анкету")
+        }
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className=" max-w-5xl mx-auto">
             {/* Header */}
             <div className="mb-8">
                 <Link href="/surveys">
@@ -98,16 +134,26 @@ export function CreateSurveyPage() {
                     </div>
                     <div>
                         <Label htmlFor="template">Шаблон анкеты</Label>
-                        <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                            <SelectTrigger id="template">
-                                <SelectValue placeholder="Выберите шаблон" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="student_v3">Анкета студента v3</SelectItem>
-                                <SelectItem value="employee">Анкета сотрудника</SelectItem>
-                                <SelectItem value="feedback">Анкета обратной связи</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        {isTemplatesLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                        ) : (
+                            <Select
+                                value={selectedTemplateId}
+                                onValueChange={setSelectedTemplateId}
+                                disabled={isLoading}
+                            >
+                                <SelectTrigger id="template">
+                                    <SelectValue placeholder="Выберите шаблон" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {templates.map((item) => (
+                                        <SelectItem key={item.id} value={String(item.id)}>
+                                            {item.title}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -126,7 +172,7 @@ export function CreateSurveyPage() {
                             </TabsTrigger>
                             <TabsTrigger value="bot" className="flex items-center gap-2">
                                 <Bot className="w-4 h-4" />
-                                Режим "Бот"
+                                Режим &quot;Бот&quot;
                             </TabsTrigger>
                         </TabsList>
 
@@ -198,7 +244,7 @@ export function CreateSurveyPage() {
                                 <div className="flex gap-3">
                                     <Bot className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                                     <div>
-                                        <h4 className="font-semibold text-blue-900 mb-1">Режим "Бот"</h4>
+                                        <h4 className="font-semibold text-blue-900 mb-1">Режим &quot;Бот&quot;</h4>
                                         <p className="text-sm text-blue-800">
                                             В этом режиме система автоматически создаст уникальные ссылки для указанного количества
                                             участников. Участники смогут заполнить анкету по ссылке без предварительной регистрации.
@@ -256,10 +302,10 @@ export function CreateSurveyPage() {
                 <Button
                     onClick={handleSubmit}
                     className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]"
-                    disabled={!surveyTitle || !selectedTemplate}
+                    disabled={!surveyTitle.trim() || !selectedTemplateId || isPending || isTemplatesLoading}
                 >
                     <Save className="w-4 h-4 mr-2" />
-                    Создать анкету
+                    {isPending ? "Создание..." : "Создать анкету"}
                 </Button>
             </div>
         </div>
