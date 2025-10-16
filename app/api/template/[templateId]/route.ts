@@ -1,19 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import {ensureAccess} from "@/shared";
 
-const API_BASE = 'http://localhost:8080'
 
-async function ensureAccess() {
-  const jar = await cookies()
-  const access = jar.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 export async function GET(req: NextRequest, context: { params: Promise<{ templateId: string }> }) {
   try {

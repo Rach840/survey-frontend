@@ -1,6 +1,6 @@
 'use client'
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {Controller, useForm, type FieldPath} from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,9 +26,29 @@ export type GeneratedFormProps = {
     schema: DynamicFormDef; // входная схема (из параметров)
     initialValues?: Record<string, unknown>; // опциональные стартовые значения (поверх дефолтов)
     onSubmit?: (values: Record<string, unknown>) => void; // колбэк сабмита
+    onChange?: (values: Record<string, unknown>) => void;
+    submitLabel?: string;
+    submittingLabel?: string;
+    resetLabel?: string;
+    hideResetButton?: boolean;
+    isSubmitting?: boolean;
+    isReadOnly?: boolean;
+    showSubmissionPreview?: boolean;
 };
 
-export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }: GeneratedFormProps) {
+export function GeneratedForm({
+    schema,
+    initialValues,
+    onSubmit: onSubmitProp,
+    onChange,
+    submitLabel,
+    submittingLabel,
+    resetLabel,
+    hideResetButton,
+    isSubmitting,
+    isReadOnly,
+    showSubmissionPreview = true,
+}: GeneratedFormProps) {
     const [submitted, setSubmitted] = useState<Record<string, unknown> | null>(null);
 
     const FormSchema = useMemo(() => buildZodShape(schema), [schema]);
@@ -45,9 +65,32 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
         mode: "onBlur",
     });
 
+    const submitButtonLabel = isSubmitting
+        ? submittingLabel ?? submitLabel ?? "Отправить"
+        : submitLabel ?? "Отправить"
+    const resetButtonLabel = resetLabel ?? "Сбросить"
+    const isFormDisabled = Boolean(isReadOnly) || Boolean(isSubmitting)
+
+    useEffect(() => {
+        form.reset(defaultVals)
+    }, [defaultVals, form])
+
+    useEffect(() => {
+        if (!onChange) {
+            return
+        }
+        const subscription = form.watch((values) => {
+            onChange(values as Record<string, unknown>)
+        })
+
+        return () => subscription.unsubscribe()
+    }, [form, onChange])
+
     function onSubmit(values: FormValues) {
         const payload = values as Record<string, unknown>;
-        setSubmitted(payload);
+        if (showSubmissionPreview) {
+            setSubmitted(payload);
+        }
         onSubmitProp?.(payload);
     }
 
@@ -87,6 +130,7 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
                                                                     onBlur={field.onBlur}
                                                                     placeholder={f.placeholder}
                                                                     type="text"
+                                                                    disabled={isFormDisabled}
                                                                 />
                                                             ) : f.type === "number" ? (
                                                                 <Input
@@ -97,6 +141,7 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
                                                                     onBlur={field.onBlur}
                                                                     placeholder={f.placeholder}
                                                                     type="number"
+                                                                    disabled={isFormDisabled}
                                                                 />
                                                             ) : f.type === "date" ? (
                                                                 <Input
@@ -106,17 +151,20 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
                                                                     onChange={field.onChange}
                                                                     onBlur={field.onBlur}
                                                                     type="date"
+                                                                    disabled={isFormDisabled}
                                                                 />
                                                             ) : f.type === "select" ? (
                                                                 <Select
                                                                     value={typeof field.value === "string" ? field.value : String(field.value ?? "")}
                                                                     onValueChange={(value) => field.onChange(value)}
+                                                                    disabled={isFormDisabled}
                                                                 >
                                                                     <SelectTrigger
                                                                         id={fieldName}
                                                                         aria-invalid={fieldState.invalid}
                                                                         onBlur={field.onBlur}
                                                                         className="min-w-[120px]"
+                                                                        disabled={isFormDisabled}
                                                                     >
                                                                         <SelectValue placeholder="Выберите…" />
                                                                     </SelectTrigger>
@@ -139,6 +187,7 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
                                                                     checked={!!field.value}
                                                                     onBlur={field.onBlur}
                                                                     onCheckedChange={(checked) => field.onChange(!!checked)}
+                                                                    disabled={isFormDisabled}
                                                                 />
 
                                                             ) : (
@@ -148,6 +197,7 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
                                                                     value={typeof field.value === "string" ? field.value : String(field.value ?? "")}
                                                                     onChange={field.onChange}
                                                                     onBlur={field.onBlur}
+                                                                    disabled={isFormDisabled}
                                                                 />
                                                             )}
                                                             {fieldState.error ? (
@@ -163,22 +213,29 @@ export function GeneratedForm({ schema, initialValues, onSubmit: onSubmitProp }:
                             ))}
 
                             <div className="flex items-center gap-3 pt-2">
-                                <Button type="submit">Отправить</Button>
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={() => {
-                                        form.reset(buildDefaultValues(schema) as FormValues);
-                                        setSubmitted(null);
-                                    }}
-                                >
-                                    Сбросить
+                                <Button type="submit" disabled={isFormDisabled}>
+                                    {submitButtonLabel}
                                 </Button>
+                                {!hideResetButton && (
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        disabled={isFormDisabled}
+                                        onClick={() => {
+                                            form.reset(buildDefaultValues(schema) as FormValues);
+                                            if (showSubmissionPreview) {
+                                                setSubmitted(null);
+                                            }
+                                        }}
+                                    >
+                                        {resetButtonLabel}
+                                    </Button>
+                                )}
                             </div>
                         </form>
 
                 </CardContent>
-                {submitted && (
+                {showSubmissionPreview && submitted && (
                     <CardFooter className="block">
                         <div className="text-sm text-muted-foreground mb-2">Отправленные данные</div>
                         <pre className="rounded-xl bg-muted p-4 text-sm overflow-auto">

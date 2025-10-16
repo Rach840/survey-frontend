@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
@@ -12,7 +12,7 @@ import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
 import { useTemplatesByMe } from "@/entities/templates/model/templateQuery"
 import { useSurveyCreate } from "@/features/survey/create-survey"
-import type { CreateSurveyPayload } from "@/features/survey/create-survey"
+import type { CreateSurveyPayload, EnrollmentCreatePayload } from "@/features/survey/create-survey"
 import { toast } from "sonner"
 import { Skeleton } from "@/shared/ui/skeleton"
 
@@ -23,17 +23,37 @@ interface Participant {
     lastName: string
 }
 
+function slugify(value: string) {
+    return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+}
+
 export function CreateSurveyPage() {
     const [surveyTitle, setSurveyTitle] = useState("")
     const [surveyDescription, setSurveyDescription] = useState("")
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
-    const [invitationMode, setInvitationMode] = useState<"manual" | "bot">("manual")
+    const [invitationMode, setInvitationMode] = useState<"admin" | "bot">("admin")
     const [participants, setParticipants] = useState<Participant[]>([])
     const [maxParticipants, setMaxParticipants] = useState(10)
+    const [publicSlug, setPublicSlug] = useState("")
+    const [isSlugDirty, setIsSlugDirty] = useState(false)
     const { data, isLoading } = useTemplatesByMe()
     const templates = data ?? []
     const isTemplatesLoading = isLoading && templates.length === 0
     const { mutateAsync, isPending } = useSurveyCreate()
+
+    useEffect(() => {
+        if (isSlugDirty) {
+            return
+        }
+        const nextSlug = slugify(surveyTitle)
+        setPublicSlug((current) => (current === nextSlug ? current : nextSlug))
+    }, [surveyTitle, isSlugDirty])
     const addParticipant = () => {
         const newParticipant: Participant = {
             id: Date.now().toString(),
@@ -59,29 +79,45 @@ export function CreateSurveyPage() {
             return
         }
 
-        const cleanedParticipants = participants
+        const normalizedParticipants = participants
             .map(({ email, firstName, lastName }) => ({
                 email: email.trim(),
-                firstName: firstName.trim() || undefined,
-                lastName: lastName.trim() || undefined,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
             }))
             .filter((participant) => participant.email)
 
-        if (invitationMode === "manual" && cleanedParticipants.length === 0) {
+        const participantsPayload: EnrollmentCreatePayload[] = normalizedParticipants.map((participant) => {
+            const fullName = [participant.firstName, participant.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim()
+
+            return {
+                full_name: fullName || participant.email,
+                email: participant.email,
+            }
+        })
+
+        if (invitationMode === "admin" && participantsPayload.length === 0) {
             toast.error("Добавьте хотя бы одного участника")
             return
         }
 
         const safeMaxParticipants = Math.max(1, maxParticipants)
+        const normalizedSlug = slugify(publicSlug)
 
         const payload: CreateSurveyPayload = {
+            template_id: Number(selectedTemplateId),
             title: surveyTitle.trim(),
-            description: surveyDescription.trim() || undefined,
-            templateId: Number(selectedTemplateId),
             invitationMode,
-            ...(invitationMode === "manual"
-                ? { participants: cleanedParticipants }
-                : { maxParticipants: safeMaxParticipants }),
+            status: "draft",
+            participants: invitationMode === "admin" ? participantsPayload : [],
+            public_slug: normalizedSlug || undefined,
+            max_participants:
+                invitationMode === "admin"
+                    ? participantsPayload.length > 0 ? participantsPayload.length : undefined
+                    : safeMaxParticipants,
         }
 
         try {
@@ -121,6 +157,27 @@ export function CreateSurveyPage() {
                             onChange={(e) => setSurveyTitle(e.target.value)}
                             placeholder="Введите название анкеты"
                         />
+                    </div>
+                    <div>
+                        <Label htmlFor="publicSlug">Публичный идентификатор</Label>
+                        <Input
+                            id="publicSlug"
+                            value={publicSlug}
+                            onChange={(e) => {
+                                setPublicSlug(slugify(e.target.value))
+                                setIsSlugDirty(true)
+                            }}
+                            onBlur={() => {
+                                if (!publicSlug.trim()) {
+                                    setIsSlugDirty(false)
+                                }
+                            }}
+                            placeholder="Например, team-onboarding"
+                            autoComplete="off"
+                        />
+                        <p className="text-xs text-gray-500">
+                            Ссылка для участников: /survey/{publicSlug || 'ваш-слаг'}
+                        </p>
                     </div>
                     <div>
                         <Label htmlFor="description">Описание</Label>
@@ -164,9 +221,9 @@ export function CreateSurveyPage() {
                     <CardTitle>Приглашения участников</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Tabs value={invitationMode} onValueChange={(v) => setInvitationMode(v as "manual" | "bot")}>
+                    <Tabs value={invitationMode} onValueChange={(v) => setInvitationMode(v as "admin" | "bot")}>
                         <TabsList className="grid w-full grid-cols-2 mb-6">
-                            <TabsTrigger value="manual" className="flex items-center gap-2">
+                            <TabsTrigger value="admin" className="flex items-center gap-2">
                                 <Users className="w-4 h-4" />
                                 Ручное добавление
                             </TabsTrigger>
@@ -176,7 +233,7 @@ export function CreateSurveyPage() {
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="manual" className="space-y-4">
+                        <TabsContent value="admin" className="space-y-4">
                             <p className="text-sm text-gray-600 mb-4">
                                 Добавьте участников вручную, указав их email и имя. Каждый участник получит персональное приглашение.
                             </p>

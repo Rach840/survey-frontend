@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { BarChart3, FileSpreadsheet, Pencil, Plus, Users } from 'lucide-react'
 
-import { surveys } from '@/entities/surveys/model/surveys'
+import { useSurveys} from '@/entities/surveys/model/surveys'
 import {
   Card,
   CardContent,
@@ -28,13 +28,11 @@ function getCompletionRate(invited: number, submitted: number) {
 }
 
 export function SurveyPage() {
-  const totalSurveys = surveys.length
-  const completedSurveys = surveys.filter((survey) => survey.status === 'completed').length
-  const activeSurveys = surveys.filter((survey) => survey.status === 'in_progress').length
 
-  const invitedTotal = surveys.reduce((acc, survey) => acc + survey.metrics.invited, 0)
-  const submittedTotal = surveys.reduce((acc, survey) => acc + survey.metrics.submitted, 0)
-  const inProgressTotal = surveys.reduce((acc, survey) => acc + survey.metrics.inProgress, 0)
+  const {data:surveys, isLoading} = useSurveys()
+  const totalSurveys = surveys?.length
+  const completedSurveys = surveys?.filter((survey) => survey.status === 'completed').length
+  const activeSurveys = surveys?.filter((survey) => survey.status === 'in_progress').length
 
   return (
     <div className='space-y-8 px-4'>
@@ -63,14 +61,14 @@ export function SurveyPage() {
           <CardContent className=''>
             <h2 className='text-sm text-gray-500'>Активные</h2>
             <p className='mt-2 text-3xl font-semibold text-gray-900'>{activeSurveys}</p>
-            <p className='text-xs text-gray-500'>В работе участников: {inProgressTotal}</p>
+            {/*<p className='text-xs text-gray-500'>В работе участников: {inProgressTotal}</p>*/}
           </CardContent>
         </Card>
         <Card>
           <CardContent className=''>
             <h2 className='text-sm text-gray-500'>Приглашено участников</h2>
-            <p className='mt-2 text-3xl font-semibold text-gray-900'>{invitedTotal}</p>
-            <p className='text-xs text-gray-500'>Завершили: {submittedTotal}</p>
+            {/*<p className='mt-2 text-3xl font-semibold text-gray-900'>{invitedTotal}</p>*/}
+            {/*<p className='text-xs text-gray-500'>Завершили: {submittedTotal}</p>*/}
           </CardContent>
         </Card>
 
@@ -113,12 +111,12 @@ export function SurveyPage() {
       </Card>
 
       <div className='grid gap-6 md:grid-cols-2 xl:grid-cols-3'>
-        {surveys.map((survey) => {
-          const completionRate = getCompletionRate(survey.metrics.invited, survey.metrics.submitted)
-          const tone = statusTone[survey.status] ?? statusTone.not_started
+        {!isLoading &&  surveys?.map((survey) => {
+          // const completionRate = getCompletionRate(survey.metrics.invited, survey.metrics.submitted)
+          // const tone = statusTone[survey.status] ?? statusTone.not_started
 
           return (
-              <SurveyCard key={survey.id} survey={survey} tone={tone} completionRate={completionRate}/>
+              <SurveyCard key={survey.id} survey={survey} />
           )
         })}
       </div>

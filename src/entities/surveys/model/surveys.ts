@@ -1,122 +1,16 @@
-export const surveys = [
-  {
-    id: 1,
-    title: 'Название анкеты',
-    description: 'Описание анкеты',
-    status: 'not_started',
-    statusLabel: 'Не начато',
-    endDate: 'Дата окончания',
-    date: 'Дата',
-    duration: 'Время прохождения',
-    questions: 'n вопросов',
-    progress: 0,
-    owner: 'Иван Петров',
-    updatedAt: '12.09.2024, 15:24',
-    metrics: {
-      invited: 120,
-      inProgress: 42,
-      submitted: 38,
-      averageScore: 4.6,
-    },
-  },
-  {
-    id: 2,
-    title: 'Название анкеты',
-    description: 'Описание анкеты',
-    status: 'in_progress',
-    statusLabel: 'В процессе',
-    endDate: 'Дата окончания',
-    date: 'Дата',
-    duration: 'Время прохождения',
-    questions: 'n вопросов',
-    progress: 60,
-    owner: 'Команда «HR»',
-    updatedAt: '10.09.2024, 09:10',
-    metrics: {
-      invited: 86,
-      inProgress: 54,
-      submitted: 12,
-      averageScore: 4.2,
-    },
-  },
-  {
-    id: 3,
-    title: 'Название анкеты',
-    description: 'Описание анкеты',
-    status: 'completed',
-    statusLabel: 'Завершено',
-    endDate: 'Дата окончания',
-    date: 'Дата',
-    duration: 'Время прохождения',
-    questions: 'n вопросов',
-    progress: 100,
-    owner: 'Маркетинг',
-    updatedAt: '05.09.2024, 18:40',
-    metrics: {
-      invited: 150,
-      inProgress: 0,
-      submitted: 132,
-      averageScore: 4.8,
-    },
-  },
-  {
-    id: 4,
-    title: 'Название анкеты',
-    description: 'Описание анкеты',
-    status: 'not_started',
-    statusLabel: 'Не начато',
-    endDate: 'Дата окончания',
-    date: 'Дата',
-    duration: 'Время прохождения',
-    questions: 'n вопросов',
-    progress: 0,
-    owner: 'Иван Петров',
-    updatedAt: '01.09.2024, 11:17',
-    metrics: {
-      invited: 60,
-      inProgress: 0,
-      submitted: 0,
-      averageScore: 0,
-    },
-  },
-  {
-    id: 5,
-    title: 'Название анкеты',
-    description: 'Описание анкеты',
-    status: 'in_progress',
-    statusLabel: 'В процессе',
-    endDate: 'Дата окончания',
-    date: 'Дата',
-    duration: 'Время прохождения',
-    questions: 'n вопросов',
-    progress: 45,
-    owner: 'Команда «Продажи»',
-    updatedAt: '08.09.2024, 12:05',
-    metrics: {
-      invited: 95,
-      inProgress: 30,
-      submitted: 28,
-      averageScore: 4.4,
-    },
-  },
-  {
-    id: 6,
-    title: 'Название анкеты',
-    description: 'Описание анкеты',
-    status: 'completed',
-    statusLabel: 'Завершено',
-    endDate: 'Дата окончания',
-    date: 'Дата',
-    duration: 'Время прохождения',
-    questions: 'n вопросов',
-    progress: 100,
-    owner: 'Команда разработки',
-    updatedAt: '30.08.2024, 16:20',
-    metrics: {
-      invited: 110,
-      inProgress: 0,
-      submitted: 104,
-      averageScore: 4.7,
-    },
-  },
-]
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { getSurveyDetail } from '../api/getSurveyDetail'
+import {getSurveys} from "@/entities/surveys/api/getSurveys";
+
+export const surveysKey = () => ['survey'] as const
+
+export function useSurveys() {
+  return useQuery({
+    queryKey: surveysKey(),
+    queryFn: () => getSurveys(),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  })
+}

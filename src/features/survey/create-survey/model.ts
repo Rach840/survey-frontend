@@ -2,20 +2,25 @@
 
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
+import type { SurveyStatus } from '@/entities/surveys/types'
 
-export type ParticipantPayload = {
-  email: string
-  firstName?: string
-  lastName?: string
+export type EnrollmentCreatePayload = {
+  full_name: string
+  email?: string
+  phone?: string
+  telegram_chat_id?: number
 }
 
 export type CreateSurveyPayload = {
+  template_id: number
   title: string
-  description?: string
-  templateId: number
-  invitationMode: 'manual' | 'bot'
-  participants?: ParticipantPayload[]
-  maxParticipants?: number
+  invitationMode: 'admin' | 'bot'
+  status: SurveyStatus
+  participants: EnrollmentCreatePayload[]
+  max_participants?: number
+  public_slug?: string
+  starts_at?: string
+  ends_at?: string
 }
 
 export function useSurveyCreate() {

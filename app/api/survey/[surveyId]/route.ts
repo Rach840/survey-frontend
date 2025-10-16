@@ -1,9 +1,8 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import {cookies} from "next/headers";
 
 const API_BASE = 'http://localhost:8080'
-
 async function ensureAccess() {
   const jar = await cookies()
   const access = jar.get('__Host-access')?.value
@@ -14,6 +13,7 @@ async function ensureAccess() {
 
   return access
 }
+
 
 async function forwardRequest(
   req: Request,

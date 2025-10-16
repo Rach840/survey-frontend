@@ -21,7 +21,8 @@ export function useSignIn() {
         onSuccess: async () => {
             // куки установлены на сервере → обновим UI
             await qc.invalidateQueries({ queryKey: meKey })
-            router.refresh() // очистка Router Cache и новый запрос к серверу
+            router.refresh()
+            router.push('/admin/survey')// очистка Router Cache и новый запрос к серверу
         },
     })
 }

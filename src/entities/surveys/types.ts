@@ -1,3 +1,5 @@
+import {Template} from "@/entities/templates/types";
+
 export type SurveyStatus = 'draft' | 'open' | 'closed' | 'archived'
 export type SurveyMode = 'admin' | 'bot'
 export type EnrollmentState =
@@ -37,8 +39,8 @@ export interface SurveyDetail {
   description?: string | null
   status: SurveyStatus
   mode: SurveyMode
-  snapshotVersion: number
-  templateId?: number | null
+  snapshot_version: number
+  template_id?: number | null
   templateTitle?: string | null
   maxParticipants?: number | null
   startsAt?: string | null
@@ -46,6 +48,17 @@ export interface SurveyDetail {
   createdAt: string
   stats: SurveyStats
   participants: SurveyParticipant[]
+}
+export interface Survey {
+  id: number,
+  owner_id: number,
+  template_id: number,
+  snapshot_version: number,
+  form_snapshot_json: Template,
+  title: string,
+  mode: string,
+  status: string,
+  created_at: string
 }
 
 export type UpdateSurveyPayload = Partial<{

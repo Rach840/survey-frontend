@@ -8,8 +8,8 @@ export function SurveyCard({survey, tone, completionRate}: {survey: SurveyDetail
         <Card key={survey.id} className='overflow-hidden border border-slate-200 shadow-sm transition-colors hover:border-slate-300'>
             <CardHeader className='border-b pb-6'>
                 <div className='flex items-start justify-between gap-3 text-sm'>
-                    <span className={`rounded-full px-3 py-1 font-medium ${tone}`}>{survey.statusLabel}</span>
-                    <span className='text-xs text-gray-500'>Обновлено {survey.updatedAt}</span>
+                    {/*<span className={`rounded-full px-3 py-1 font-medium ${tone}`}>{survey.statusLabel}</span>*/}
+                    {/*<span className='text-xs text-gray-500'>Обновлено {survey.updatedAt}</span>*/}
                 </div>
                 <CardTitle className='text-xl text-gray-900'>{survey.title}</CardTitle>
                 <CardDescription className='text-gray-600'>{survey.description}</CardDescription>
@@ -18,32 +18,32 @@ export function SurveyCard({survey, tone, completionRate}: {survey: SurveyDetail
                 <div className='grid grid-cols-2 gap-4 text-sm text-gray-600'>
                     <div>
                         <span className='text-xs uppercase tracking-wide text-gray-500'>Приглашено</span>
-                        <div className='text-lg font-semibold text-gray-900'>{survey.metrics.invited}</div>
+                        {/*<div className='text-lg font-semibold text-gray-900'>{survey.metrics.invited}</div>*/}
                     </div>
                     <div>
                         <span className='text-xs uppercase tracking-wide text-gray-500'>Активно</span>
-                        <div className='text-lg font-semibold text-gray-900'>{survey.metrics.inProgress}</div>
+                        {/*<div className='text-lg font-semibold text-gray-900'>{survey.metrics.inProgress}</div>*/}
                     </div>
                     <div>
                         <span className='text-xs uppercase tracking-wide text-gray-500'>Завершили</span>
-                        <div className='text-lg font-semibold text-gray-900'>{survey.metrics.submitted}</div>
+                        {/*<div className='text-lg font-semibold text-gray-900'>{survey.metrics.submitted}</div>*/}
                     </div>
                     <div>
                         <span className='text-xs uppercase tracking-wide text-gray-500'>Ответственный</span>
-                        <div className='text-lg font-semibold text-gray-900'>{survey.owner}</div>
+                        {/*<div className='text-lg font-semibold text-gray-900'>{survey.owner}</div>*/}
                     </div>
                 </div>
 
                 <div>
                     <div className='mb-2 flex items-center justify-between text-xs uppercase tracking-wide text-gray-500'>
                         <span>Прогресс</span>
-                        <span>{completionRate}%</span>
+                        {/*<span>{completionRate}%</span>*/}
                     </div>
                     <div className='h-2 rounded-full bg-slate-200'>
-                        <div
-                            className='h-2 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]'
-                            style={{ width: `${completionRate}%` }}
-                        />
+                        {/*<div*/}
+                        {/*    className='h-2 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]'*/}
+                        {/*    style={{ width: `${completionRate}%` }}*/}
+                        {/*/>*/}
                     </div>
                 </div>
 

@@ -1,4 +1,3 @@
-// app/api/me/route.ts (проксируем в Go, токен подставляем на сервере)
 import { cookies } from 'next/headers'
 
 export async function GET() {
