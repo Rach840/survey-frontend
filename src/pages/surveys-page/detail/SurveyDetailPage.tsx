@@ -91,7 +91,7 @@ const defaultStats = {
   expired: 0,
 }
 
-export function SurveyDetailPage({
+export  default  function SurveyDetailPage({
   surveyId,
   autoOpenEdit = false,
 }: {
@@ -236,7 +236,7 @@ export function SurveyDetailPage({
               <CardTitle className="text-2xl">{data.title}</CardTitle>
               <p className="max-w-3xl text-sm text-gray-600">{data.description || "Описание отсутствует"}</p>
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                <span>Версия шаблона: {data.snapshotVersion}</span>
+                <span>Версия шаблона: {data.snapshot_version}</span>
                 {data.templateTitle ? <span>Шаблон: {data.templateTitle}</span> : null}
                 <span>Создано: {formatDateTime(data.createdAt)}</span>
                 <span>Ограничение: {data.maxParticipants ?? "—"}</span>

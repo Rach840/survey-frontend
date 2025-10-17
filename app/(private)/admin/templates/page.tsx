@@ -1,1 +1,1 @@
-export {TemplatesPage as default} from '@/pages/template-page'
+export {default} from '@/pages/template-page'

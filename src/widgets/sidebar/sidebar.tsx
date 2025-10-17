@@ -1,7 +1,9 @@
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -14,6 +16,7 @@ import Image from 'next/image'
 import {useMeQuery} from "@/entities/user/model/meQuery";
 import {Button} from "@/shared";
 import {useSignOut} from "@/features/auth/sign-out/model";
+
 export function AppSidebar() {
     const { data: user, isLoading } = useMeQuery()
     const {mutate: signOut} = useSignOut()

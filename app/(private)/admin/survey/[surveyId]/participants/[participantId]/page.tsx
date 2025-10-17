@@ -1,4 +1,4 @@
-import { SurveyParticipantPage } from '@/pages/surveys-page'
+import  SurveyParticipantPage from '@/pages/surveys-page/participant-detail'
 
 export default function SurveyParticipantRoute({
   params,

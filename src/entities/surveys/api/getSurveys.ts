@@ -1,5 +1,5 @@
-import { apiFetch } from '@/shared'
-import type {Survey, SurveyDetail} from '../types'
+import {apiFetch} from '@/shared'
+import type {Survey} from '../types'
 
 export async function getSurveys(): Promise<Survey[]> {
     const response = await apiFetch(`/api/survey/getAllSurvey`)

@@ -3,7 +3,7 @@ import Link from "next/link";
 import {BarChart3, FileSpreadsheet, Pencil, Users} from "lucide-react";
 import {SurveyDetail} from "@/entities/surveys/types";
 
-export function SurveyCard({survey, tone, completionRate}: {survey: SurveyDetail, tone:number, completionRate: number}){
+export default function SurveyCard({survey}: {survey: SurveyDetail, tone:number, completionRate: number}){
     return (
         <Card key={survey.id} className='overflow-hidden border border-slate-200 shadow-sm transition-colors hover:border-slate-300'>
             <CardHeader className='border-b pb-6'>

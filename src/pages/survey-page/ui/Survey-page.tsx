@@ -1,24 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, CheckCircle2, RefreshCcw } from 'lucide-react'
-import { toast } from 'sonner'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {useMutation, useQueryClient} from '@tanstack/react-query'
+import {AlertCircle, CheckCircle2, RefreshCcw} from 'lucide-react'
+import {toast} from 'sonner'
 
-import {
-  publicSurveySessionKey,
-  submitPublicSurveyResponse,
-  usePublicSurveySession,
-} from '@/entities/public-survey'
-import { sectionsToDynamicForm } from '@/entities/templates/lib/toDynamicForm'
-import type { EnrollmentState, ResponseState, SurveyStatus } from '@/entities/surveys/types'
-import { GeneratedForm } from '@/features/template/generated'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Skeleton } from '@/shared/ui/skeleton'
+import {publicSurveySessionKey, submitPublicSurveyResponse, usePublicSurveySession,} from '@/entities/public-survey'
+import {sectionsToDynamicForm} from '@/entities/templates/lib/toDynamicForm'
+import type {EnrollmentState, ResponseState, SurveyStatus} from '@/entities/surveys/types'
+import {GeneratedForm} from '@/features/template/generated'
+import {Button} from '@/shared/ui/button'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
+import {Skeleton} from '@/shared/ui/skeleton'
 
 type SurveyPageProps = {
-  publicSlug: string
   token?: string
 }
 
@@ -89,29 +84,27 @@ function clearDraft(key: string) {
   }
 }
 
-export function SurveyPage({ publicSlug, token }: SurveyPageProps) {
+export  default  function SurveyPage({token }: SurveyPageProps) {
   if (!token) {
     return <TokenMissingNotice />
   }
-
-  return <SurveyPageContent publicSlug={publicSlug} token={token} />
+  return <SurveyPageContent token={token} />
 }
 
 type SurveyPageContentProps = {
-  publicSlug: string
   token: string
 }
 
-function SurveyPageContent({ publicSlug, token }: SurveyPageContentProps) {
+function SurveyPageContent({  token }: SurveyPageContentProps) {
   const queryClient = useQueryClient()
-  const { data, isLoading, isError, error, refetch } = usePublicSurveySession(publicSlug, token)
+  const { data, isLoading, isError, error, refetch } = usePublicSurveySession( token)
   const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>()
   const autosaveTimer = useRef<number | null>(null)
 
   const storageKey = useMemo(() => {
     if (!data) return undefined
-    return `${STORAGE_PREFIX}${publicSlug}:${data.enrollment.id}`
-  }, [data, publicSlug])
+    return `${STORAGE_PREFIX}${token}:${data.enrollment.id}`
+  }, [data])
 
   const isSubmitted = data?.response?.state === 'submitted'
 
@@ -146,7 +139,7 @@ function SurveyPageContent({ publicSlug, token }: SurveyPageContentProps) {
 
   const mutation = useMutation({
     mutationFn: async (answers: Record<string, unknown>) => {
-      return submitPublicSurveyResponse(publicSlug, token, {
+      return submitPublicSurveyResponse( token, {
         answers,
         channel: 'web',
       })
@@ -156,7 +149,7 @@ function SurveyPageContent({ publicSlug, token }: SurveyPageContentProps) {
         clearDraft(storageKey)
       }
       await queryClient.invalidateQueries({
-        queryKey: publicSurveySessionKey(publicSlug, token),
+        queryKey: publicSurveySessionKey( token),
       })
       toast.success('Ответы отправлены')
     },

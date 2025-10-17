@@ -39,7 +39,7 @@ function getFieldsCount(sections?: Template["draft_schema_json"] | null) {
   return sections.reduce((acc, section) => acc + section.fields.length, 0)
 }
 
-export function TemplatePreviewPage({ templateId }: TemplatePreviewPageProps) {
+export  default  function TemplatePreviewPage({ templateId }: TemplatePreviewPageProps) {
   const { data, isLoading, isError, refetch } = useTemplateDetail(templateId)
   const [variant, setVariant] = useState<TemplateVariant>("draft")
   const [initialized, setInitialized] = useState(false)

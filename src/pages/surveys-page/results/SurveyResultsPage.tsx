@@ -44,7 +44,7 @@ function formatDateTime(value?: string | null) {
   }
 }
 
-export function SurveyResultsPage({ surveyId }: { surveyId: string }) {
+export default  function SurveyResultsPage({ surveyId }: { surveyId: string }) {
   const { data, isLoading, isError, refetch } = useSurveyDetail(surveyId)
 
   const stats = data?.stats

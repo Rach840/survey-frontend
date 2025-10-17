@@ -1,29 +1,30 @@
-import {registerSchema} from "@/pages/register-page/schema";
-import {toast} from "sonner";
-import {useRouter} from "next/router";
+import { registerSchema } from '@/pages/register-page/schema/register-schema'
+import { getApiBaseUrl } from '@/shared/api/base-url'
+import { toast } from 'sonner'
 
-export async function registerAction(
-    _: unknown,
-    formData: FormData){
-    console.log(process.env.API_URL)
-    try {
-        const data = registerSchema.parse(Object.fromEntries(formData.entries()));
-        const r = await fetch(`http://localhost:8080/api/auth/register`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(data),
-        })
-        if (!r.ok) throw new Error('register failed')
-        toast.success("Пользователь создан")
+export default async function registerAction(
+  _: unknown,
+  formData: FormData,
+) {
+  console.log(process.env.API_URL)
 
-        return r.status
-    }catch (e) {
-        toast.error("Произошла ошибка")
-     return e
+  try {
+    const data = registerSchema.parse(Object.fromEntries(formData.entries()))
+    const upstream = await fetch(`${getApiBaseUrl()}/api/auth/register`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+
+    if (!upstream.ok) {
+      throw new Error('register failed')
     }
 
-
-
-
+    toast.success('Пользователь создан')
+    return upstream.status
+  } catch (error) {
+    toast.error('Произошла ошибка')
+    return error
+  }
 }

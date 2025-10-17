@@ -1,11 +1,6 @@
-import type { PublicSurveySession } from '../types'
-import type { TemplateSection } from '@/entities/templates/types'
-import type {
-  EnrollmentState,
-  ResponseState,
-  SurveyMode,
-  SurveyStatus,
-} from '@/entities/surveys/types'
+import type {PublicSurveySession} from '../types'
+import type {TemplateSection} from '@/entities/templates/types'
+import type {EnrollmentState, ResponseState, SurveyMode, SurveyStatus,} from '@/entities/surveys/types'
 
 type RawSurveyBlock = {
   id: number
@@ -84,14 +79,13 @@ function mapSession(raw: RawPublicSurveySession): PublicSurveySession {
 }
 
 export async function getPublicSurveySession(
-  publicSlug: string,
   token: string,
 ): Promise<PublicSurveySession> {
-  const response = await fetch(`/api/public/survey/${encodeURIComponent(publicSlug)}`, {
+  console.log(token)
+  const response = await fetch(`/api/public/survey/${encodeURIComponent(token)}`, {
     method: 'GET',
     headers: {
       'content-type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     cache: 'no-store',
   })

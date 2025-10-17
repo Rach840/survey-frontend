@@ -1,8 +1,7 @@
-import {LoginForm} from "@/pages/login-page/LoginForm";
-import {getMe} from "@/entities/user/api/getMe";
-import {useMeQuery} from "@/entities/user/model/meQuery";
+import LoginForm from "@/pages/login-page/LoginForm";
 
-export async function LoginPage() {
+
+export default async function LoginPage() {
 
 
 

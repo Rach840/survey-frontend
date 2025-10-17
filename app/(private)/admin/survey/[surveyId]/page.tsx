@@ -1,5 +1,4 @@
-import { SurveyDetailPage } from '@/pages/surveys-page'
-
+import SurveyDetailPage from '@/pages/surveys-page/detail/SurveyDetailPage';
 export default function SurveyDetailRoute({
   params,
   searchParams,

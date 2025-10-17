@@ -1,4 +1,4 @@
-import {Bell, FileStack, FileText, Settings} from "lucide-react";
+import { FileStack, FileText, Settings} from "lucide-react";
 
 export const items = [
     {

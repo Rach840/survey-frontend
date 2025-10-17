@@ -4,7 +4,7 @@ import { TemplateDesigner, TemplateUpsertPayload } from "@/features/template/des
 import { useTemplateCreate } from "@/features/template/create-template/model"
 import { toast } from "sonner"
 
-export function CreateTemplatePage() {
+export default function CreateTemplatePage() {
   const { mutateAsync, isPending } = useTemplateCreate()
 
   const handleSubmit = async (payload: TemplateUpsertPayload) => {

@@ -1,1 +1,1 @@
-export {CreateSurveyPage as default} from '@/pages/surveys-page'
+export { default} from '@/pages/surveys-page/create'

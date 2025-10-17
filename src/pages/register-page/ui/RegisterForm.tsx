@@ -1,17 +1,18 @@
 'use client'
-import {useActionState, useEffect, useState} from "react";
+import {useActionState, useEffect} from "react";
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/shared/ui/card";
 import {Input} from "@/shared/ui/input";
 import {Button} from "@/shared/ui/button";
 import Image from "next/image"
-import { zodResolver } from "@hookform/resolvers/zod"
-import {registerSchema, RegisterSchema} from "@/pages/register-page/schema";
+import {zodResolver} from "@hookform/resolvers/zod"
+import {registerSchema, RegisterSchema} from "@/pages/register-page/schema/register-schema";
 import {Controller, useForm} from "react-hook-form";
 import {Field, FieldError, FieldGroup, FieldLabel} from "@/shared/ui/field";
 import Link from "next/link";
-import {registerAction} from "@/pages/register-page/api/registerAction";
+import registerAction from "@/pages/register-page/api/registerAction";
 import {useRouter} from "next/navigation";
-export  function RegisterForm() {
+
+export default function RegisterForm() {
     const router = useRouter()
     const registerForm = useForm<RegisterSchema>({
         resolver: zodResolver(registerSchema),

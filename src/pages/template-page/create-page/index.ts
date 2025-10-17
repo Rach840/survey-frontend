@@ -1,1 +1,1 @@
-export * from './CreateTemplatePage'
+export {default} from './CreateTemplatePage'

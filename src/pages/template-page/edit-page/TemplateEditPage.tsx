@@ -9,7 +9,7 @@ import { Skeleton } from "@/shared/ui/skeleton"
 import { Button } from "@/shared/ui/button"
 import { toast } from "sonner"
 
-export function TemplateEditPage({ templateId }: { templateId: string }) {
+export default function TemplateEditPage({ templateId }: { templateId: string }) {
   const router = useRouter()
   const { data, isLoading, isError, refetch } = useTemplateDetail(templateId)
   const { mutateAsync, isPending } = useTemplateUpdate(templateId)

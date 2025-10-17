@@ -1,1 +1,1 @@
-export * from './SurveyCard'
+export  { default } from './SurveyCard'

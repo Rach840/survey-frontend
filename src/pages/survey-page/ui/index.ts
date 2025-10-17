@@ -1,1 +1,1 @@
-export * from "./Survey-page"
+export  { default } from "./Survey-page"

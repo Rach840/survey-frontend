@@ -1,20 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Button } from "@/shared/ui/button"
-import { Input } from "@/shared/ui/input"
-import { Label } from "@/shared/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
-import { Textarea } from "@/shared/ui/textarea"
-import { Plus, Trash2, Users, Bot, Save, ArrowLeft } from "lucide-react"
+import {useEffect, useState} from "react"
+import {Button} from "@/shared/ui/button"
+import {Input} from "@/shared/ui/input"
+import {Label} from "@/shared/ui/label"
+import {Card, CardContent, CardHeader, CardTitle} from "@/shared/ui/card"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/shared/ui/select"
+import {Textarea} from "@/shared/ui/textarea"
+import {ArrowLeft, Bot, Plus, Save, Trash2, Users} from "lucide-react"
 import Link from "next/link"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
-import { useTemplatesByMe } from "@/entities/templates/model/templateQuery"
-import { useSurveyCreate } from "@/features/survey/create-survey"
-import type { CreateSurveyPayload, EnrollmentCreatePayload } from "@/features/survey/create-survey"
-import { toast } from "sonner"
-import { Skeleton } from "@/shared/ui/skeleton"
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/shared/ui/tabs"
+import {useTemplatesByMe} from "@/entities/templates/model/templateQuery"
+import type {CreateSurveyPayload, EnrollmentCreatePayload} from "@/features/survey/create-survey"
+import {useSurveyCreate} from "@/features/survey/create-survey"
+import {toast} from "sonner"
+import {Skeleton} from "@/shared/ui/skeleton"
 
 interface Participant {
     id: string
@@ -33,7 +33,7 @@ function slugify(value: string) {
         .replace(/^-|-$/g, '')
 }
 
-export function CreateSurveyPage() {
+export default function CreateSurveyPage() {
     const [surveyTitle, setSurveyTitle] = useState("")
     const [surveyDescription, setSurveyDescription] = useState("")
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
@@ -288,7 +288,7 @@ export function CreateSurveyPage() {
                                             </CardContent>
                                         </Card>
                                     ))}
-                                    <Button onClick={addParticipant} variant="outline" className="w-full bg-transparent">
+                                    <Button onClick={addParticipant} variant="outline" className="w-full ">
                                         <Plus className="w-4 h-4 mr-2" />
                                         Добавить участника
                                     </Button>

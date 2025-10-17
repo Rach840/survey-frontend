@@ -1,1 +1,1 @@
-export * from './TemplateEditPage'
+export {default} from './TemplateEditPage'

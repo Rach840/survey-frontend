@@ -1,20 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { ArrowLeft, Filter, RefreshCcw } from 'lucide-react'
+import {useState} from 'react'
+import {ArrowLeft, RefreshCcw} from 'lucide-react'
 
-import { useSurveyDetail } from '@/entities/surveys/model/surveyDetailQuery'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
-import { Button } from '@/shared/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Skeleton } from '@/shared/ui/skeleton'
+import {useSurveyDetail} from '@/entities/surveys/model/surveyDetailQuery'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from '@/shared/ui/card'
+import {Button} from '@/shared/ui/button'
+import {Skeleton} from '@/shared/ui/skeleton'
+import {CopyButton} from "@/components/ui/shadcn-io/copy-button";
 
 const enrollmentLabels: Record<string, string> = {
   invited: 'Приглашён',
@@ -45,11 +39,11 @@ function formatDateTime(value?: string | null) {
   }
 }
 
-export function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
+export  default  function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
   const [stateFilter, setStateFilter] = useState<string>('all')
   const { data, isLoading, isError, refetch } = useSurveyDetail(surveyId)
 
-  const participants = data?.participants ?? []
+  const participants = data?.invitations ?? []
   const filteredParticipants =
     stateFilter === 'all'
       ? participants
@@ -110,30 +104,30 @@ export function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
           <CardDescription className='text-gray-600'>Следите за статусами и открывайте карточки для экспорта в PDF.</CardDescription>
         </CardHeader>
         <CardContent className='space-y-4 py-6'>
-          <div className='flex flex-wrap items-center gap-4'>
-            <div className='inline-flex items-center gap-2 text-sm text-gray-600'>
-              <Filter className='h-4 w-4' />
-              Фильтр по статусу
-            </div>
-            <Select value={stateFilter} onValueChange={setStateFilter}>
-              <SelectTrigger className='w-[220px]'>
-                <SelectValue placeholder='Все статусы' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>Все статусы</SelectItem>
-                {Object.entries(enrollmentLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {stateFilter !== 'all' ? (
-              <Button variant='link' className='h-auto px-0 text-[#2563eb]' onClick={() => setStateFilter('all')}>
-                Сбросить фильтр
-              </Button>
-            ) : null}
-          </div>
+          {/*<div className='flex flex-wrap items-center gap-4'>*/}
+          {/*  <div className='inline-flex items-center gap-2 text-sm text-gray-600'>*/}
+          {/*    <Filter className='h-4 w-4' />*/}
+          {/*    Фильтр по статусу*/}
+          {/*  </div>*/}
+          {/*  <Select value={stateFilter} onValueChange={setStateFilter}>*/}
+          {/*    <SelectTrigger className='w-[220px]'>*/}
+          {/*      <SelectValue placeholder='Все статусы' />*/}
+          {/*    </SelectTrigger>*/}
+          {/*    <SelectContent>*/}
+          {/*      <SelectItem value='all'>Все статусы</SelectItem>*/}
+          {/*      {Object.entries(enrollmentLabels).map(([key, label]) => (*/}
+          {/*        <SelectItem key={key} value={key}>*/}
+          {/*          {label}*/}
+          {/*        </SelectItem>*/}
+          {/*      ))}*/}
+          {/*    </SelectContent>*/}
+          {/*  </Select>*/}
+          {/*  {stateFilter !== 'all' ? (*/}
+          {/*    <Button variant='link' className='h-auto px-0 text-[#2563eb]' onClick={() => setStateFilter('all')}>*/}
+          {/*      Сбросить фильтр*/}
+          {/*    </Button>*/}
+          {/*  ) : null}*/}
+          {/*</div>*/}
 
           {filteredParticipants.length === 0 ? (
             <div className='rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-gray-500'>
@@ -147,16 +141,15 @@ export function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
                     <th className='px-4 py-3'>Участник</th>
                     <th className='px-4 py-3'>Контакты</th>
                     <th className='px-4 py-3'>Статус</th>
-                    <th className='px-4 py-3'>Прогресс</th>
-                    <th className='px-4 py-3'>Последняя активность</th>
+                    <th className='px-4 py-3'>Ссылка Приглашения</th>
                     <th className='px-4 py-3 text-right'>Карточка</th>
                   </tr>
                 </thead>
                 <tbody className='divide-y divide-gray-100 text-sm text-gray-700'>
                   {filteredParticipants.map((participant) => (
-                    <tr key={participant.id} className='transition-colors hover:bg-slate-50'>
+                    <tr key={participant.enrollment_id} className='transition-colors hover:bg-slate-50'>
                       <td className='px-4 py-3'>
-                        <div className='font-medium text-gray-900'>{participant.fullName}</div>
+                        <div className='font-medium text-gray-900'>{participant.full_name}</div>
                         <div className='text-xs text-gray-500'>Источник: {participant.source === 'bot' ? 'бот' : 'админ'}</div>
                       </td>
                       <td className='px-4 py-3'>{participant.email ?? '—'}</td>
@@ -167,17 +160,7 @@ export function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
                         </div>
                       </td>
                       <td className='px-4 py-3'>
-                        <div className='mb-1 text-sm font-medium text-gray-900'>{participant.progress}%</div>
-                        <div className='h-2 rounded-full bg-gray-200'>
-                          <div
-                            className='h-2 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]'
-                            style={{ width: `${participant.progress}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className='px-4 py-3'>
-                        <div>{formatDateTime(participant.lastActivity)}</div>
-                        <div className='text-xs text-gray-500'>Завершено: {formatDateTime(participant.submittedAt)}</div>
+                        <CopyButton content={`http://localhost:3000/survey/${participant.token}`} variant={"secondary"} size="md" />
                       </td>
                       <td className='px-4 py-3 text-right'>
                         <Link

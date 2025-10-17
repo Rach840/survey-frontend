@@ -1,7 +1,5 @@
 'use client'
-import {useState} from "react";
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/shared/ui/card";
-import {Eye, EyeOff, LogIn,Lock, User} from "lucide-react";
 import {Input} from "@/shared/ui/input";
 import {Button} from "@/shared/ui/button";
 import Image from "next/image"
@@ -11,10 +9,9 @@ import {Controller, useForm} from "react-hook-form";
 import {loginSchema, LoginSchema} from "@/pages/login-page/schema/login-schema";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {Field, FieldError, FieldGroup, FieldLabel} from "@/shared";
-import {useRouter} from "next/navigation";
-export  function LoginForm() {
 
-    const router = useRouter()
+export default  function LoginForm() {
+
     const {mutate} = useSignIn()
     const loginForm = useForm<LoginSchema>({
         resolver: zodResolver(loginSchema),

@@ -1,2 +1,2 @@
-export * from './CreatePage'
+export  { default } from './CreatePage'
 

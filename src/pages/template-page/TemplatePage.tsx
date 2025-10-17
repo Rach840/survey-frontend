@@ -1,14 +1,14 @@
 "use client"
 
-import { Button } from "@/shared/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared/ui/card"
-import { Skeleton } from "@/shared/ui/skeleton"
-import { Plus } from "lucide-react"
+import {Button} from "@/shared/ui/button"
+import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/shared/ui/card"
+import {Skeleton} from "@/shared/ui/skeleton"
+import {Plus} from "lucide-react"
 import Link from "next/link"
-import { useTemplatesByMe } from "@/entities/templates/model/templateQuery"
-import type { Template, TemplateSection } from "@/entities/templates/types"
+import {useTemplatesByMe} from "@/entities/templates/model/templateQuery"
+import type {Template, TemplateSection} from "@/entities/templates/types"
 
-export function TemplatesPage() {
+export default function TemplatesPage() {
   const { data, isLoading } = useTemplatesByMe()
 
   const skeletonCards = Array.from({ length: 3 }, (_, index) => (
@@ -77,7 +77,7 @@ export function TemplatesPage() {
                   </CardContent>
                   <CardFooter className="flex gap-2">
                     <Link href={`/admin/templates/${template.id}/edit`} className="flex-1">
-                      <Button variant="outline" className="w-full bg-transparent">
+                      <Button variant="secondary" className="w-full bg-transparent">
                         Редактировать
                       </Button>
                     </Link>

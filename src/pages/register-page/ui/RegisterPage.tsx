@@ -1,7 +1,7 @@
 
-import {RegisterForm} from "@/pages/register-page/ui/RegisterForm";
+import RegisterForm from "@/pages/register-page/ui/RegisterForm";
 
-export function RegisterPage() {
+export default function RegisterPage() {
     return (
         <div className="min-h-screen bg-[#eff6ff] flex items-center justify-center relative z-10  p-4 relative overflow-hidden">
             <div className="absolute top-24 right-32 w-32 h-32 rounded-full z-20 bg-gradient-to-br from-[#a5b4fc] to-[#c4b5fd] opacity-60" />

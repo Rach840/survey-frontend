@@ -1,26 +1,30 @@
 'use client'
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
-import {Controller, useForm, type FieldPath} from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import {useEffect, useMemo, useState} from "react";
+import {Controller, type FieldPath, useForm} from "react-hook-form";
+import {z} from "zod";
+import {zodResolver} from "@hookform/resolvers/zod";
 
-import { Button } from "@/shared";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared";
-import { Input } from "@/shared";
-
-import {buildDefaultValues, buildZodShape, DynamicFormDef} from "@/features/template/generated/model";
 import {
+    Button,
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
     Checkbox,
     Field,
     FieldContent,
     FieldLabel,
+    Input,
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue
 } from "@/shared";
+
+import {buildDefaultValues, buildZodShape, DynamicFormDef} from "@/features/template/generated/model";
 
 export type GeneratedFormProps = {
     schema: DynamicFormDef; // входная схема (из параметров)
@@ -95,7 +99,7 @@ export function GeneratedForm({
     }
 
     return (
-        <div className="mx-auto max-w-2xl ">
+        <div className="mx-auto w-full ">
             <Card className="shadow-lg">
                 <CardHeader>
                     <CardTitle className="text-2xl">{schema.title}</CardTitle>

@@ -1,1 +1,1 @@
-export * from "./TemplatePreviewPage"
+export {default} from "./TemplatePreviewPage"

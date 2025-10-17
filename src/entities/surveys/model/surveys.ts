@@ -1,7 +1,6 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { getSurveyDetail } from '../api/getSurveyDetail'
+import {useQuery} from '@tanstack/react-query'
 import {getSurveys} from "@/entities/surveys/api/getSurveys";
 
 export const surveysKey = () => ['survey'] as const

@@ -1,18 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { Button } from "@/shared/ui/button"
-import { Input } from "@/shared/ui/input"
-import { Label } from "@/shared/ui/label"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
-import { Checkbox } from "@/shared/ui/checkbox"
-import { Textarea } from "@/shared/ui/textarea"
-import { Skeleton } from "@/shared/ui/skeleton"
-import { Plus, Trash2, GripVertical, Save, Upload } from "lucide-react"
-import type { DesignerTemplate, DesignerSection, DesignerField, DesignerFieldType, TemplateUpsertPayload } from "../types"
-import { normalizeDesignerTemplate } from "../lib"
-import { toast } from "sonner"
+import {useCallback, useEffect, useState} from "react"
+import {Button} from "@/shared/ui/button"
+import {Input} from "@/shared/ui/input"
+import {Label} from "@/shared/ui/label"
+import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/shared/ui/card"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/shared/ui/select"
+import {Checkbox} from "@/shared/ui/checkbox"
+import {Textarea} from "@/shared/ui/textarea"
+import {Skeleton} from "@/shared/ui/skeleton"
+import {GripVertical, Plus, Save, Trash2, Upload} from "lucide-react"
+import type {DesignerField, DesignerFieldType, DesignerSection, DesignerTemplate, TemplateUpsertPayload} from "../types"
+import {normalizeDesignerTemplate} from "../lib"
+import {toast} from "sonner"
 
 const DEFAULT_TEMPLATE: DesignerTemplate = {
   title: "",
@@ -466,7 +466,7 @@ export function TemplateDesigner({
                   </Card>
                 ))}
 
-                <Button variant="outline" onClick={() => addField(section.id)} className="w-full">
+                <Button variant="outline" onClick={() => addField(section.id)} className="w-full  ">
                   <Plus className="w-4 h-4 mr-2" />
                   Добавить поле
                 </Button>

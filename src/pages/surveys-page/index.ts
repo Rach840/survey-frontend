@@ -1,6 +1,1 @@
-export * from './SurveyPage'
-export * from './create'
-export * from './detail'
-export * from './results'
-export * from './participants'
-export * from './participant-detail'
+export  { default } from './SurveyPage'

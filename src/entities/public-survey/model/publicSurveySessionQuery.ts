@@ -1,17 +1,16 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { getPublicSurveySession } from '../api/getPublicSurveySession'
+import {useQuery} from '@tanstack/react-query'
+import {getPublicSurveySession} from '../api/getPublicSurveySession'
 
-export const publicSurveySessionKey = (slug: string | undefined, token: string | undefined) =>
-  ['public-survey-session', slug ?? '', token ?? ''] as const
+export const publicSurveySessionKey = (token: string | undefined) =>
+  ['public-survey-session',  token ?? ''] as const
 
-export function usePublicSurveySession(publicSlug: string | undefined, token: string | undefined) {
-  const enabled = Boolean(publicSlug) && Boolean(token)
-
+export function usePublicSurveySession(token: { publicSlug: string } | undefined) {
+  const enabled =Boolean(token.publicSlug)
   return useQuery({
-    queryKey: publicSurveySessionKey(publicSlug, token),
-    queryFn: () => getPublicSurveySession(publicSlug ?? '', token ?? ''),
+    queryKey: publicSurveySessionKey(token.publicSlug),
+    queryFn: () => getPublicSurveySession( token.publicSlug ?? ''),
     enabled,
     staleTime: 0,
     retry: false,

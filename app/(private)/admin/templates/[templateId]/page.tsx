@@ -1,5 +1,9 @@
-import { TemplatePreviewPage } from '@/pages/template-page'
+'use client'
+import TemplatePreviewPage from '@/pages/template-page/preview'
+import {useParams} from "next/navigation";
 
-export default function TemplatePreviewRoute({ params }: { params: { templateId: string } }) {
+export default function TemplatePreviewRoute() {
+  const params = useParams()
+  console.log(params.templateId)
   return <TemplatePreviewPage templateId={params.templateId} />
 }

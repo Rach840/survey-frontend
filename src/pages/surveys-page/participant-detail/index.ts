@@ -1,1 +1,1 @@
-export * from './SurveyParticipantPage'
+export  { default } from './SurveyParticipantPage'

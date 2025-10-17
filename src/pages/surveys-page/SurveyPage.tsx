@@ -1,33 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart3, FileSpreadsheet, Pencil, Plus, Users } from 'lucide-react'
+import {Plus} from 'lucide-react'
 
-import { useSurveys} from '@/entities/surveys/model/surveys'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
-import { Button } from '@/shared/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Input } from '@/shared/ui/input'
-import {SurveyCard} from "@/entities/surveys/ui";
+import {useSurveys} from '@/entities/surveys/model/surveys'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from '@/shared/ui/card'
+import {Button} from '@/shared/ui/button'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/shared/ui/select'
+import {Input} from '@/shared/ui/input'
+import SurveyCard from "@/entities/surveys/ui";
 
-const statusTone: Record<string, string> = {
-  not_started: 'bg-slate-100 text-slate-700',
-  in_progress: 'bg-amber-100 text-amber-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-}
 
-function getCompletionRate(invited: number, submitted: number) {
-  if (!invited) return 0
-  return Math.round((submitted / invited) * 100)
-}
-
-export function SurveyPage() {
+export    default function SurveyPage() {
 
   const {data:surveys, isLoading} = useSurveys()
   const totalSurveys = surveys?.length
@@ -49,7 +33,7 @@ export function SurveyPage() {
         </Link>
       </div>
 
-      <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
+      <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-2'>
         <Card>
           <CardContent className=''>
             <h2 className='text-sm text-gray-500'>Всего анкет</h2>
@@ -64,13 +48,7 @@ export function SurveyPage() {
             {/*<p className='text-xs text-gray-500'>В работе участников: {inProgressTotal}</p>*/}
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className=''>
-            <h2 className='text-sm text-gray-500'>Приглашено участников</h2>
-            {/*<p className='mt-2 text-3xl font-semibold text-gray-900'>{invitedTotal}</p>*/}
-            {/*<p className='text-xs text-gray-500'>Завершили: {submittedTotal}</p>*/}
-          </CardContent>
-        </Card>
+
 
       </div>
 

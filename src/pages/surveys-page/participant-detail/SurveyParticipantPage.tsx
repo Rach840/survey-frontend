@@ -80,7 +80,7 @@ function getAnswerSections(participantId: string): AnswerSection[] {
   return mockAnswerMap[participantId] ?? mockAnswerMap.default
 }
 
-export function SurveyParticipantPage({
+export  default  function SurveyParticipantPage({
   surveyId,
   participantId,
 }: {
