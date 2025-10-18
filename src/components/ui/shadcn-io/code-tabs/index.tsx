@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useTheme } from 'next-themes';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import {
   Tabs,
   TabsContent,
@@ -12,8 +12,8 @@ import {
   TabsContents,
   useTabs,
   type TabsProps,
-} from '@repo/tabs';
-import { CopyButton } from '@repo/copy-button';
+} from '@/components/ui/shadcn-io/tabs';
+import { CopyButton } from '@/components/ui/shadcn-io/copy-button';
 
 type CodeTabsProps = {
   codes: Record<string, string>;

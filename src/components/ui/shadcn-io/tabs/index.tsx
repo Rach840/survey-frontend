@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { motion, type Transition, type HTMLMotionProps } from 'motion/react';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import {
   MotionHighlight,
   MotionHighlightItem,
-} from '@repo/motion-highlight';
+} from '@/components/ui/shadcn-io/motion-highlight';
 
 // Tabs Component
 type TabsContextType<T extends string> = {

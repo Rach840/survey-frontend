@@ -1,4 +1,4 @@
-import { FileStack, FileText, Settings} from "lucide-react";
+import {FileStack, FileText} from "lucide-react";
 
 export const items = [
     {
@@ -10,10 +10,5 @@ export const items = [
         title: "Шаблоны",
         url: "/admin/templates",
         icon: FileStack,
-    },
-    {
-        title: "Настройки",
-        url: "#",
-        icon: Settings,
     },
 ]

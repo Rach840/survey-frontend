@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import {NextRequest, NextResponse} from 'next/server'
 
 const PROTECTED_PREFIXES = ['/app']
-const ADMIN_PREFIXES = ['/admin', '/app/admin']
 export function middleware(req: NextRequest) {
     const { pathname, search } = req.nextUrl
     const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))

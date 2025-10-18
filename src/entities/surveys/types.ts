@@ -58,6 +58,7 @@ export interface Survey {
   title: string,
   mode: string,
   status: string,
+  description?: string | null,
   created_at: string
 }
 

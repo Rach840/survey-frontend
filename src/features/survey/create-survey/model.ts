@@ -1,14 +1,13 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import type { SurveyStatus } from '@/entities/surveys/types'
+import {useMutation} from '@tanstack/react-query'
+import {useRouter} from 'next/navigation'
+import type {SurveyStatus} from '@/entities/surveys/types'
 
 export type EnrollmentCreatePayload = {
   full_name: string
   email?: string
   phone?: string
-  telegram_chat_id?: number
 }
 
 export type CreateSurveyPayload = {

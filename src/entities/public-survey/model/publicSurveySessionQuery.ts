@@ -3,14 +3,15 @@
 import {useQuery} from '@tanstack/react-query'
 import {getPublicSurveySession} from '../api/getPublicSurveySession'
 
-export const publicSurveySessionKey = (token: string | undefined) =>
-  ['public-survey-session',  token ?? ''] as const
+export const publicSurveySessionKey = (publicSlug: string | undefined) =>
+  ['public-survey-session', publicSlug ?? ''] as const
 
-export function usePublicSurveySession(token: { publicSlug: string } | undefined) {
-  const enabled =Boolean(token.publicSlug)
+export function usePublicSurveySession(publicSlug: string | undefined) {
+  const enabled = Boolean(publicSlug)
+
   return useQuery({
-    queryKey: publicSurveySessionKey(token.publicSlug),
-    queryFn: () => getPublicSurveySession( token.publicSlug ?? ''),
+    queryKey: publicSurveySessionKey(publicSlug),
+    queryFn: () => getPublicSurveySession(publicSlug ?? ''),
     enabled,
     staleTime: 0,
     retry: false,

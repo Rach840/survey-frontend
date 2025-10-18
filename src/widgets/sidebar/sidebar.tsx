@@ -70,7 +70,7 @@ export function AppSidebar() {
                                 >
 
                                     <DropdownMenuItem>
-                                        <Button onClick={signOut} >
+                                        <Button onClick={() => signOut()}>
                                             <span>Выйти</span>
                                         </Button>
 

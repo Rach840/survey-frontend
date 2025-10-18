@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers'
-import { getApiBaseUrl } from '@/shared/api/base-url'
+import {cookies} from 'next/headers'
+import {getApiBaseUrl} from '@/shared/api/base-url'
 
 async function ensureAccess() {
   const jar = await cookies()
@@ -14,6 +14,7 @@ async function ensureAccess() {
 
 export async function GET() {
   const access = await ensureAccess()
+  console.log(`${getApiBaseUrl()}/api/survey/`)
   const upstream = await fetch(`${getApiBaseUrl()}/api/survey/`, {
     method: 'GET',
     headers: {
