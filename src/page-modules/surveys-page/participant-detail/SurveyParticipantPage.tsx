@@ -1,19 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
-import { ArrowLeft, FileText, RefreshCcw } from 'lucide-react'
+import {useMemo} from 'react'
+import {motion} from 'motion/react'
+import {ArrowLeft, FileText} from 'lucide-react'
 
-import { useSurveyDetail } from '@/entities/surveys/model/surveyDetailQuery'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
-import { Button } from '@/shared/ui/button'
-import { Skeleton } from '@/shared/ui/skeleton'
+import {useSurveyDetail} from '@/entities/surveys/model/surveyDetailQuery'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from '@/shared/ui/card'
+import {Button} from '@/shared/ui/button'
+import {Skeleton} from '@/shared/ui/skeleton'
+import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
+import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
 
 const enrollmentLabels: Record<string, string> = {
   invited: 'Приглашён',
@@ -89,63 +86,57 @@ export  default  function SurveyParticipantPage({
 }) {
   const { data, isLoading, isError, refetch } = useSurveyDetail(surveyId)
 
-  const participant = useMemo(
-    () => data?.participants.find((item) => String(item.id) === participantId),
-    [data?.participants, participantId],
-  )
+  const participant = useMemo(() => {
+    const items = data?.participants ?? data?.invitations ?? []
+    return items.find((item) => String(item.id) === participantId)
+  }, [data?.participants, data?.invitations, participantId])
 
   const answers = useMemo(() => getAnswerSections(participantId), [participantId])
 
   if (isLoading) {
     return (
-      <div className='space-y-4 p-8'>
-        <Skeleton className='h-20 w-full' />
-        <Skeleton className='h-32 w-full' />
-        <Skeleton className='h-64 w-full' />
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+        <motion.div
+          className='space-y-4'
+          initial='hidden'
+          animate='show'
+          variants={fadeUpVariants}
+          transition={fadeTransition}
+        >
+          <Skeleton className='h-20 w-full rounded-2xl' />
+          <Skeleton className='h-32 w-full rounded-2xl' />
+          <Skeleton className='h-64 w-full rounded-2xl' />
+        </motion.div>
       </div>
     )
   }
 
   if (isError || !data) {
-    return (
-      <div className='p-8'>
-        <Card className='border-red-200 bg-red-50'>
-          <CardContent className='space-y-3 p-6'>
-            <CardTitle className='text-lg text-red-700'>Не удалось загрузить данные участника</CardTitle>
-            <CardDescription className='text-red-600'>Попробуйте обновить страницу или повторите попытку позже.</CardDescription>
-            <div className='flex gap-3'>
-              <Button onClick={() => refetch()} variant='outline' className='gap-2'>
-                <RefreshCcw className='h-4 w-4' />
-                Повторить запрос
-              </Button>
-              <Link href={`/admin/survey/${surveyId}/participants`}>
-                <Button variant='ghost' className='gap-2'>
-                  <ArrowLeft className='h-4 w-4' />
-                  Назад к списку участников
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return  <ErrorFetch refetch={refetch}/>
   }
 
   if (!participant) {
     return (
-      <div className='p-8'>
-        <Card>
-          <CardContent className='space-y-3 p-6'>
-            <CardTitle className='text-lg text-gray-900'>Участник не найден</CardTitle>
-            <CardDescription className='text-gray-600'>Проверьте ссылку или вернитесь к списку участников.</CardDescription>
-            <Link href={`/admin/survey/${surveyId}/participants`}>
-              <Button variant='outline' className='gap-2'>
-                <ArrowLeft className='h-4 w-4' />
-                Вернуться назад
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+        <motion.div
+          initial='hidden'
+          animate='show'
+          variants={fadeUpVariants}
+          transition={fadeTransition}
+        >
+          <Card className='border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
+            <CardContent className='space-y-3 p-6'>
+              <CardTitle className='text-lg text-gray-900'>Участник не найден</CardTitle>
+              <CardDescription className='text-gray-600'>Проверьте ссылку или вернитесь к списку участников.</CardDescription>
+              <Link href={`/admin/survey/${surveyId}/participants`}>
+                <Button variant='outline' className='gap-2'>
+                  <ArrowLeft className='h-4 w-4' />
+                  Вернуться назад
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     )
   }
@@ -153,23 +144,35 @@ export  default  function SurveyParticipantPage({
   const exportHref = `/api/survey/${surveyId}/participants/${participantId}/export?format=pdf`
 
   return (
-    <div className='space-y-8 p-8'>
-      <div className='flex flex-wrap items-center justify-between gap-4'>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <motion.div
+        className='flex flex-wrap items-center justify-between gap-4'
+        initial='hidden'
+        animate='show'
+        variants={fadeUpVariants}
+        transition={fadeTransition}
+      >
         <Link href={`/admin/survey/${surveyId}/participants`} className='text-sm text-gray-600 hover:text-gray-900'>
           <span className='inline-flex items-center gap-2'>
             <ArrowLeft className='h-4 w-4' />
             Назад к участникам
           </span>
         </Link>
-        <Button asChild className='gap-2'>
+        <Button asChild className='gap-2 shadow-sm transition-transform hover:-translate-y-0.5'>
           <a href={exportHref} download>
             <FileText className='h-4 w-4' />
             Экспортировать в PDF
           </a>
         </Button>
-      </div>
+      </motion.div>
 
-      <Card>
+      <motion.div
+        initial='hidden'
+        animate='show'
+        variants={fadeUpVariants}
+        transition={{ ...fadeTransition, delay: 0.05 }}
+      >
+      <Card className='border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
         <CardHeader className='border-b pb-6'>
           <CardTitle className='text-2xl font-semibold text-gray-900'>{participant.fullName}</CardTitle>
           <CardDescription className='text-gray-600'>Карточка с данными анкеты и статусом прохождения.</CardDescription>
@@ -205,10 +208,17 @@ export  default  function SurveyParticipantPage({
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
-      <div className='space-y-4'>
+      <motion.div
+        className='space-y-4'
+        initial='hidden'
+        animate='show'
+        variants={fadeUpVariants}
+        transition={{ ...fadeTransition, delay: 0.1 }}
+      >
         {answers.map((section) => (
-          <Card key={section.title}>
+          <Card key={section.title} className='border-none bg-white/85 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
             <CardHeader className='border-b pb-4'>
               <CardTitle className='text-lg font-semibold text-gray-900'>{section.title}</CardTitle>
               <CardDescription className='text-gray-500'>Ответы участника</CardDescription>
@@ -225,7 +235,7 @@ export  default  function SurveyParticipantPage({
             </CardContent>
           </Card>
         ))}
-      </div>
+      </motion.div>
     </div>
   )
 }

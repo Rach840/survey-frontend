@@ -7,6 +7,7 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/shared/ui/card"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/shared/ui/select"
 import {ArrowLeft, Save} from "lucide-react"
 import Link from "next/link"
+import {motion} from "motion/react"
 import {useTemplatesByMe} from "@/entities/templates/model/templateQuery"
 import type {EnrollmentCreatePayload} from "@/features/survey/create-survey"
 import {useSurveyCreate} from "@/features/survey/create-survey"
@@ -18,6 +19,7 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import {Field, FieldDescription, FieldError, FieldLabel} from "@/shared";
 import {z} from "zod";
 import {MethodCard, Participant} from "@/pages/surveys-page/create/ui/MethodCard";
+import {fadeTransition, fadeUpVariants} from "@/shared/ui/page-transition";
 
 
 function slugify(value: string) {
@@ -33,7 +35,8 @@ export type RHFContext = Record<string, never>;
 export default function CreateSurveyPage() {
     const [participants, setParticipants] = useState<Participant[]>([])
     const [maxParticipants, setMaxParticipants] = useState(10)
-    const { data:templates, isLoading } = useTemplatesByMe()
+    const { data: templatesData, isLoading } = useTemplatesByMe()
+    const templates = templatesData ?? []
     const { mutateAsync, isPending } = useSurveyCreate()
     const createForm = useForm<SurveyInput, RHFContext, SurveyOutput>({
         resolver: zodResolver(surveySchema),
@@ -75,8 +78,6 @@ export default function CreateSurveyPage() {
             toast.error("Добавьте хотя бы одного участника")
             return
         }
-        console.log(createForm.getValues())
-
     const data = surveySchema.safeParse(createForm.getValues())
     if (!data.success) {
         toast.error(Object.values(z.flattenError(data.error)).flat().map(er=> Object.values(er).toString()).flat().toString())
@@ -93,25 +94,35 @@ export default function CreateSurveyPage() {
     }
 
     return (
-        <div className=" max-w-5xl mx-auto">
-            {/* Header */}
-            <div className="mb-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-20 pt-10 sm:px-8 lg:px-12">
+            <motion.div
+                className="mx-auto flex max-w-5xl flex-col gap-8"
+                initial="hidden"
+                animate="show"
+                variants={fadeUpVariants}
+                transition={fadeTransition}
+            >
+            <div>
                 <Link href="/surveys">
                     <Button variant="ghost" className="mb-4">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Назад к анкетам
                     </Button>
                 </Link>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Создание новой анкеты</h1>
+                <h1 className="mb-2 text-3xl font-bold text-gray-900">Создание новой анкеты</h1>
                 <p className="text-gray-600">Заполните информацию и добавьте участников</p>
             </div>
 
-            <Card className="mb-6">
+            <motion.div
+                variants={fadeUpVariants}
+                transition={{ ...fadeTransition, delay: 0.05 }}
+            >
+            <Card className="mb-6 border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle>Основная информация</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <form action={handleSubmit} id="form-survey-create" className=" space-y-6">
+                    <form action={handleSubmit} id="form-survey-create" className="space-y-6">
                         <Controller
                             name="title"
                             control={createForm.control}
@@ -171,21 +182,21 @@ export default function CreateSurveyPage() {
                                         Шаблон анкеты
                                     </FieldLabel>
 
-                                    {isLoading && templates?.length === 0 ? (
+                                    {isLoading && templates.length === 0 ? (
                                         <Skeleton className="h-10 w-full" />
                                     ) : (
                                         <Select
                                             {...field}
                                             aria-invalid={fieldState.invalid}
                                             value={String(createForm.getValues('template_id'))}
-                                            onValueChange={(v)=> createForm.setValue("template_id",Number(v))}
+                                            onValueChange={(v) => createForm.setValue("template_id", Number(v))}
                                             disabled={isLoading}
                                         >
                                             <SelectTrigger id="template">
                                                 <SelectValue placeholder="Выберите шаблон" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {  templates?.map((item) => (
+                                                {templates.map((item) => (
                                                     <SelectItem key={item.id} value={String(item.id)}>
                                                         {item.title}
                                                     </SelectItem>
@@ -202,8 +213,26 @@ export default function CreateSurveyPage() {
                     </form>
                 </CardContent>
             </Card>
-<MethodCard form={createForm} setParticipants={setParticipants} participants={participants} maxParticipants={maxParticipants} setMaxParticipants={setMaxParticipants}/>
-            <div className="flex gap-4 justify-end">
+            </motion.div>
+
+            <motion.div
+                variants={fadeUpVariants}
+                transition={{ ...fadeTransition, delay: 0.1 }}
+            >
+                <MethodCard
+                    form={createForm}
+                    setParticipants={setParticipants}
+                    participants={participants}
+                    maxParticipants={maxParticipants}
+                    setMaxParticipants={setMaxParticipants}
+                />
+            </motion.div>
+
+            <motion.div
+                className="flex justify-end gap-4"
+                variants={fadeUpVariants}
+                transition={{ ...fadeTransition, delay: 0.15 }}
+            >
                 <Link href="/surveys">
                     <Button variant="outline">Отмена</Button>
                 </Link>
@@ -215,7 +244,8 @@ export default function CreateSurveyPage() {
                     <Save className="w-4 h-4 mr-2" />
                     {isPending ? "Создание..." : "Создать анкету"}
                 </Button>
-            </div>
+            </motion.div>
+            </motion.div>
         </div>
     )
 }

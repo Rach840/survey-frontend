@@ -160,6 +160,7 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
+      console.log(values)
       if (isSubmitted) {
         toast.info('Ответ уже отправлен.')
         return

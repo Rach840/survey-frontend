@@ -1,13 +1,13 @@
 "use client"
 
-import { useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { TemplateDesigner, mapTemplateToDesigner, TemplateUpsertPayload } from "@/features/template/designer"
-import { useTemplateDetail } from "@/entities/templates/model/templateDetailQuery"
-import { useTemplateUpdate } from "@/features/template/update-template"
-import { Skeleton } from "@/shared/ui/skeleton"
-import { Button } from "@/shared/ui/button"
-import { toast } from "sonner"
+import {useCallback} from "react"
+import {useRouter} from "next/navigation"
+import {mapTemplateToDesigner, TemplateDesigner, TemplateUpsertPayload} from "@/features/template/designer"
+import {useTemplateDetail} from "@/entities/templates/model/templateDetailQuery"
+import {useTemplateUpdate} from "@/features/template/update-template"
+import {Skeleton} from "@/shared/ui/skeleton"
+import {toast} from "sonner"
+import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
 
 export default function TemplateEditPage({ templateId }: { templateId: string }) {
   const router = useRouter()
@@ -38,16 +38,7 @@ export default function TemplateEditPage({ templateId }: { templateId: string })
   }
 
   if (isError || !data) {
-    return (
-      <div className="p-8">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-600">
-          <p className="mb-4">Не удалось загрузить шаблон. Попробуйте снова выполнить запрос.</p>
-          <Button variant="outline" onClick={() => refetch()}>
-            Повторить попытку
-          </Button>
-        </div>
-      </div>
-    )
+    return <ErrorFetch refetch={refetch}/>
   }
 
   return (

@@ -1,16 +1,17 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import {useEffect, useMemo, useState} from "react"
 import Link from "next/link"
-import { Button } from "@/shared/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
-import { Skeleton } from "@/shared/ui/skeleton"
-import { Separator } from "@/shared/ui/separator"
-import { useTemplateDetail } from "@/entities/templates/model/templateDetailQuery"
-import { sectionsToDynamicForm } from "@/entities/templates/lib/toDynamicForm"
-import { GeneratedForm } from "@/features/template/generated"
-import type { Template, TemplateSection } from "@/entities/templates/types"
-import { RefreshCcw, ArrowLeft, Eye, EyeOff } from "lucide-react"
+import {Button} from "@/shared/ui/button"
+import {Card, CardHeader, CardTitle} from "@/shared/ui/card"
+import {Skeleton} from "@/shared/ui/skeleton"
+import {Separator} from "@/shared/ui/separator"
+import {useTemplateDetail} from "@/entities/templates/model/templateDetailQuery"
+import {sectionsToDynamicForm} from "@/entities/templates/lib/toDynamicForm"
+import {GeneratedForm} from "@/features/template/generated"
+import type {Template, TemplateSection} from "@/entities/templates/types"
+import {ArrowLeft, Eye, EyeOff, RefreshCcw} from "lucide-react"
+import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
 
 const variantLabels: Record<TemplateVariant, string> = {
   published: "Опубликованная версия",
@@ -98,21 +99,7 @@ export  default  function TemplatePreviewPage({ templateId }: TemplatePreviewPag
   )
 
   if (isError) {
-    return (
-      <div className="p-8">
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-700">Не удалось загрузить шаблон</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-red-600">Проверьте соединение с сервером и попробуйте снова.</p>
-            <Button variant="outline" className="gap-2" onClick={() => refetch()}>
-              <RefreshCcw className="h-4 w-4" /> Повторить запрос
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <ErrorFetch refetch={refetch}/>
   }
 
   return (

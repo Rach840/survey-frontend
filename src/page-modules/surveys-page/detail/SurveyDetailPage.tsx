@@ -1,76 +1,60 @@
-"use client"
+'use client'
 
-import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
-import { Button } from "@/shared/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet"
-import { Input } from "@/shared/ui/input"
-import { Textarea } from "@/shared/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
-import { Skeleton } from "@/shared/ui/skeleton"
-import { useSurveyDetail } from "@/entities/surveys/model/surveyDetailQuery"
-import { useSurveyUpdate } from "@/features/survey/update-survey"
-import type { SurveyParticipant, SurveyStatus } from "@/entities/surveys/types"
-import { toast } from "sonner"
-import { ArrowLeft, Edit3, RefreshCcw } from "lucide-react"
+import {useEffect, useMemo, useState} from 'react'
+import Link from 'next/link'
+import {motion} from 'motion/react'
+import {ArrowLeft, Edit3, RefreshCcw} from 'lucide-react'
+
+import {useSurveyStatistics} from '@/entities/surveys/model/surveyStatisticsQuery'
+import {useSurveyUpdate} from '@/features/survey/update-survey'
+import type {SurveyResult, SurveyStatus} from '@/entities/surveys/types'
+import {Button} from '@/shared/ui/button'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/shared/ui/sheet'
+import {Input} from '@/shared/ui/input'
+import {Textarea} from '@/shared/ui/textarea'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/shared/ui/select'
+import {Skeleton} from '@/shared/ui/skeleton'
+import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
+import {toast} from 'sonner'
+import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
 
 const statusLabels: Record<SurveyStatus, string> = {
-  draft: "Черновик",
-  open: "Открыта",
-  closed: "Закрыта",
-  archived: "Архив",
+  draft: 'Черновик',
+  open: 'Открыта',
+  closed: 'Закрыта',
+  archived: 'Архив',
 }
 
 const statusTone: Record<SurveyStatus, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  open: "bg-green-100 text-green-700",
-  closed: "bg-red-100 text-red-700",
-  archived: "bg-slate-200 text-slate-700",
+  draft: 'bg-gray-100 text-gray-700',
+  open: 'bg-green-100 text-green-700',
+  closed: 'bg-red-100 text-red-700',
+  archived: 'bg-slate-200 text-slate-700',
 }
 
-const enrollmentLabels: Record<string, string> = {
-  invited: "Приглашён",
-  pending: "Ожидает",
-  approved: "Одобрен",
-  active: "Активен",
-  rejected: "Отклонён",
-  removed: "Удалён",
-  expired: "Истёк",
-}
-
-const responseLabels: Record<string, string> = {
-  in_progress: "В процессе",
-  submitted: "Завершено",
-}
-
-const dateTimeFormatter = new Intl.DateTimeFormat("ru-RU", {
-  dateStyle: "medium",
-  timeStyle: "short",
+const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
 })
 
-function formatDateTime(value?: string | null) {
-  if (!value) return "—"
-  try {
-    return dateTimeFormatter.format(new Date(value))
-  } catch {
-    return value
-  }
-}
+const numberFormatter = new Intl.NumberFormat('ru-RU')
 
-function toInputDateTime(value?: string | null) {
-  if (!value) return ""
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ""
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
+const fadeInitial = fadeUpVariants.hidden
+const fadeAnimate = fadeUpVariants.show
 
-function parseDateTime(value: string) {
-  if (!value) return null
-  const iso = new Date(value)
-  if (Number.isNaN(iso.getTime())) return null
-  return iso.toISOString()
+type MetricCard = {
+  label: string
+  value: string
+  percentage?: number
 }
 
 type EditFormState = {
@@ -82,65 +66,232 @@ type EditFormState = {
   endsAt: string
 }
 
-const defaultStats = {
-  invited: 0,
-  pending: 0,
-  active: 0,
-  inProgress: 0,
-  submitted: 0,
-  expired: 0,
+type SnapshotField = {
+  code?: string
+  label?: string
+  title?: string
+  type?: string
+  required?: boolean
 }
 
-export  default  function SurveyDetailPage({
+type SnapshotSection = {
+  code?: string
+  title?: string
+  repeatable?: boolean
+  fields: SnapshotField[]
+}
+
+const defaultStats = {
+  total_enrollments: 0,
+  responses_started: 0,
+  responses_submitted: 0,
+  responses_in_progress: 0,
+  completion_rate: 0,
+  overall_progress: 0,
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—'
+  try {
+    return dateTimeFormatter.format(new Date(value))
+  } catch {
+    return value
+  }
+}
+
+function formatNumber(value?: number | null) {
+  if (value === undefined || value === null || Number.isNaN(value)) return '0'
+  return numberFormatter.format(value)
+}
+
+function normalizePercentage(value?: number | null) {
+  if (value === undefined || value === null || Number.isNaN(value)) return 0
+  const scaled = value <= 1 ? value * 100 : value
+  return Math.max(0, Math.min(100, Math.round(scaled)))
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function coerceField(field: unknown): SnapshotField | null {
+  if (!isRecord(field)) return null
+  const code = typeof field['code'] === 'string' ? (field['code'] as string) : undefined
+  const label = typeof field['label'] === 'string' ? (field['label'] as string) : undefined
+  const title = typeof field['title'] === 'string' ? (field['title'] as string) : undefined
+  const type = typeof field['type'] === 'string' ? (field['type'] as string) : undefined
+  const required = field['required'] === true
+  return {
+    code,
+    label,
+    title,
+    type,
+    required,
+  }
+}
+
+function coerceSection(section: unknown): SnapshotSection | null {
+  if (!isRecord(section)) return null
+  const fieldsRaw = Array.isArray(section['fields']) ? (section['fields'] as unknown[]) : []
+  const fields = fieldsRaw.map(coerceField).filter(Boolean) as SnapshotField[]
+  return {
+    code: typeof section['code'] === 'string' ? (section['code'] as string) : undefined,
+    title: typeof section['title'] === 'string' ? (section['title'] as string) : undefined,
+    repeatable: section['repeatable'] === true,
+    fields,
+  }
+}
+
+function extractSections(sections: unknown[]): SnapshotSection[] {
+  return sections.map(coerceSection).filter(Boolean) as SnapshotSection[]
+}
+
+function normalizeFormSections(snapshot: SurveyResult['survey']['form_snapshot_json']): SnapshotSection[] {
+  if (!snapshot) return []
+
+  if (Array.isArray(snapshot)) {
+    return extractSections(snapshot)
+  }
+
+  if (typeof snapshot === 'string') {
+    try {
+      const parsed = JSON.parse(snapshot)
+      if (Array.isArray(parsed)) {
+        return extractSections(parsed)
+      }
+    } catch {
+      return []
+    }
+  }
+
+  if (isRecord(snapshot)) {
+    const published = snapshot['published_schema_json']
+    if (Array.isArray(published) && published.length) {
+      return extractSections(published)
+    }
+
+    const draft = snapshot['draft_schema_json']
+    if (Array.isArray(draft)) {
+      return extractSections(draft)
+    }
+  }
+
+  return []
+}
+
+function truncateToken(token?: string | null) {
+  if (!token) return '—'
+  if (token.length <= 22) return token
+  return `${token.slice(0, 12)}…${token.slice(-6)}`
+}
+
+function readSurveyProp<T = unknown>(survey: SurveyResult['survey'] | undefined, ...keys: string[]): T | undefined {
+  if (!survey) return undefined
+  const record = survey as unknown as Record<string, unknown>
+  for (const key of keys) {
+    if (key in record) {
+      return record[key] as T
+    }
+  }
+  return undefined
+}
+
+function createMetrics(result?: SurveyResult): MetricCard[] {
+  const stats = result?.statistics ?? defaultStats
+  const completion = normalizePercentage(stats.completion_rate)
+  const overall = normalizePercentage(stats.overall_progress)
+
+  return [
+    { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
+    { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
+    { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
+    { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
+    { label: 'Конверсия', value: `${completion}%`, percentage: completion },
+    { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
+  ]
+}
+
+export default function SurveyDetailPage({
   surveyId,
   autoOpenEdit = false,
 }: {
   surveyId: string
   autoOpenEdit?: boolean
 }) {
-  const { data, isLoading, isError, refetch } = useSurveyDetail(surveyId)
-  const { mutateAsync, isPending } = useSurveyUpdate(surveyId)
+  const {data, isLoading, isError, refetch} = useSurveyStatistics(surveyId)
+  const {mutateAsync, isPending} = useSurveyUpdate(surveyId)
   const [editOpen, setEditOpen] = useState(false)
   const [form, setForm] = useState<EditFormState | null>(null)
 
-  useEffect(() => {
-    if (!data) return
-    setForm({
-      title: data.title,
-      description: data.description ?? "",
-      status: data.status,
-      maxParticipants: data.maxParticipants ? String(data.maxParticipants) : "",
-      startsAt: toInputDateTime(data.startsAt),
-      endsAt: toInputDateTime(data.endsAt),
+  const survey = data?.survey
+  const invitations = useMemo(() => data?.invitations ?? [], [data?.invitations])
+  const metrics = useMemo(() => createMetrics(data), [data])
+  const formSections = useMemo(() => normalizeFormSections(survey?.form_snapshot_json), [survey?.form_snapshot_json])
+
+  const invitationInsights = useMemo(() => {
+    if (!invitations.length) {
+      return { total: 0, active: 0, expired: 0, expiringSoon: 0, nextExpiration: null as string | null }
+    }
+
+    const now = Date.now()
+    const soonThreshold = now + 72 * 60 * 60 * 1000
+    let expired = 0
+    let expiringSoon = 0
+    let nextExpiration: number | null = null
+
+    invitations.forEach((invitation) => {
+      if (!invitation.expires_at) return
+      const timestamp = new Date(invitation.expires_at).getTime()
+      if (Number.isNaN(timestamp)) return
+      if (timestamp < now) {
+        expired += 1
+        return
+      }
+      if (timestamp <= soonThreshold) {
+        expiringSoon += 1
+      }
+      if (nextExpiration === null || timestamp < nextExpiration) {
+        nextExpiration = timestamp
+      }
     })
-  }, [data])
+
+    const active = invitations.length - expired
+
+    return {
+      total: invitations.length,
+      active,
+      expired,
+      expiringSoon,
+      nextExpiration: nextExpiration ? new Date(nextExpiration).toISOString() : null,
+    }
+  }, [invitations])
 
   useEffect(() => {
-    if (!autoOpenEdit || !data) return
+    if (!survey) {
+      setForm(null)
+      return
+    }
+
+    const maxParticipantsValue = readSurveyProp<number | string>(survey, 'max_participants', 'maxParticipants')
+    const startsAtValue = readSurveyProp<string>(survey, 'starts_at', 'startsAt')
+    const endsAtValue = readSurveyProp<string>(survey, 'ends_at', 'endsAt')
+
+    setForm({
+      title: survey.title,
+      description: survey.description ?? '',
+      status: (survey.status as SurveyStatus) ?? 'draft',
+      maxParticipants: maxParticipantsValue !== undefined && maxParticipantsValue !== null ? String(maxParticipantsValue) : '',
+      startsAt: toInputDateTime(startsAtValue ?? null),
+      endsAt: toInputDateTime(endsAtValue ?? null),
+    })
+  }, [survey])
+
+  useEffect(() => {
+    if (!autoOpenEdit || !survey) return
     setEditOpen(true)
-  }, [autoOpenEdit, data])
+  }, [autoOpenEdit, survey])
 
-  const stats = data?.stats ?? defaultStats
-  const participantRows = data?.participants ?? []
-
-  const metrics = useMemo(
-    () => [
-      { label: "Приглашено", value: stats.invited },
-      { label: "Активно", value: stats.active },
-      { label: "В процессе", value: stats.inProgress },
-      { label: "Завершено", value: stats.submitted },
-      { label: "Ожидание", value: stats.pending },
-      { label: "Истекло", value: stats.expired },
-    ],
-    [stats],
-  )
-
-  const completionRate = useMemo(() => {
-    if (!stats.invited) return 0
-    return Math.round((stats.submitted / stats.invited) * 100)
-  }, [stats])
-
-  const handleChange = <K extends keyof EditFormState,>(key: K, value: EditFormState[K]) => {
+  const handleChange = <K extends keyof EditFormState>(key: K, value: EditFormState[K]) => {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev))
   }
 
@@ -157,138 +308,138 @@ export  default  function SurveyDetailPage({
     }
 
     if (payload.maxParticipants !== null && Number.isNaN(payload.maxParticipants)) {
-      toast.error("Введите корректное число участников")
+      toast.error('Введите корректное число участников')
       return
     }
 
     try {
       await mutateAsync(payload)
-      toast.success("Анкета обновлена")
+      toast.success('Анкета обновлена')
       setEditOpen(false)
     } catch (error) {
       console.error(error)
-      toast.error("Не удалось сохранить изменения")
+      toast.error('Не удалось сохранить изменения')
     }
   }
 
-  const renderParticipantRow = (participant: SurveyParticipant) => {
-    const enrollmentLabel = enrollmentLabels[participant.state] ?? participant.state
-    const responseLabel = participant.responseState ? responseLabels[participant.responseState] ?? participant.responseState : "—"
-    const progress = Math.max(0, Math.min(100, participant.progress))
+  const renderSkeleton = () => (
+    <motion.div
+      className='space-y-6'
+      initial={fadeInitial}
+      animate={fadeAnimate}
+      transition={fadeTransition}
+    >
+      <Skeleton className='h-24 w-full rounded-2xl' />
+      <div className='grid gap-4 md:grid-cols-3'>
+        <Skeleton className='h-24 rounded-2xl' />
+        <Skeleton className='h-24 rounded-2xl' />
+        <Skeleton className='h-24 rounded-2xl' />
+      </div>
+      <Skeleton className='h-48 w-full rounded-2xl' />
+    </motion.div>
+  )
 
-    return (
-      <tr key={participant.id} className="border-b last:border-b-0">
-        <td className="px-4 py-3">
-          <div className="font-medium text-gray-900">{participant.fullName}</div>
-          <div className="text-sm text-gray-500">{participant.source === "bot" ? "Бот" : "Админ"}</div>
-        </td>
-        <td className="px-4 py-3 text-sm text-gray-600">
-          {participant.email ?? "—"}
-        </td>
-        <td className="px-4 py-3 text-sm">
-          <span className="inline-flex items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{enrollmentLabel}</span>
-            <span className="text-gray-500">{responseLabel}</span>
-          </span>
-        </td>
-        <td className="px-4 py-3">
-          <div className="mb-1 text-sm font-medium text-gray-900">{progress}%</div>
-          <div className="h-2 w-full rounded-full bg-gray-200">
-            <div className="h-2 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]" style={{ width: `${progress}%` }} />
-          </div>
-        </td>
-        <td className="px-4 py-3 text-sm text-gray-600">
-          <div>Последнее: {formatDateTime(participant.lastActivity)}</div>
-          <div className="text-xs text-gray-500">Отправлено: {formatDateTime(participant.submittedAt)}</div>
-        </td>
-      </tr>
-    )
-  }
+
 
   const renderContent = () => {
-    if (isLoading || !data || !form) {
-      return (
-        <div className="space-y-6">
-          <Skeleton className="h-24 w-full" />
-          <div className="grid gap-4 md:grid-cols-3">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-          <Skeleton className="h-48 w-full" />
-        </div>
-      )
+    if (isLoading || !survey || !form) {
+      return renderSkeleton()
     }
 
+    const surveyStatus = (survey.status as SurveyStatus) ?? 'draft'
+    const statusBadge = statusTone[surveyStatus] ?? statusTone.draft
+
+    const rawMaxParticipants = readSurveyProp<number | string>(survey, 'max_participants', 'maxParticipants') ?? null
+    const rawStartsAt = readSurveyProp<string>(survey, 'starts_at', 'startsAt') ?? null
+    const rawEndsAt = readSurveyProp<string>(survey, 'ends_at', 'endsAt') ?? null
+    const rawTemplateTitle = readSurveyProp<string>(survey, 'template_title', 'templateTitle') ?? null
+    const rawCreatedAt = readSurveyProp<string>(survey, 'created_at', 'createdAt') ?? null
+
+    const createdAtDisplay = formatDateTime(rawCreatedAt)
+    const startsAtDisplay = formatDateTime(rawStartsAt)
+    const endsAtDisplay = formatDateTime(rawEndsAt)
+    const nextExpirationDisplay = formatDateTime(invitationInsights.nextExpiration)
+
+    const stats = data?.statistics ?? defaultStats
+
     return (
-      <>
-        <Card>
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusTone[data.status]}`}>
-                  {statusLabels[data.status]}
+      <motion.div
+        className='space-y-6'
+        initial={fadeInitial}
+        animate={fadeAnimate}
+        transition={fadeTransition}
+      >
+        <Card className='border-none  shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
+          <CardHeader className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
+            <div className='space-y-2'>
+              <div className='flex flex-wrap items-center gap-3'>
+                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadge}`}>
+                  {statusLabels[surveyStatus]}
                 </span>
-                <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                  {data.mode === "bot" ? "Режим бота" : "Ручной режим"}
+                <span className='inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700'>
+                  {survey.mode === 'bot' ? 'Режим бота' : 'Админ режим'}
                 </span>
               </div>
-              <CardTitle className="text-2xl">{data.title}</CardTitle>
-              <p className="max-w-3xl text-sm text-gray-600">{data.description || "Описание отсутствует"}</p>
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                <span>Версия шаблона: {data.snapshot_version}</span>
-                {data.templateTitle ? <span>Шаблон: {data.templateTitle}</span> : null}
-                <span>Создано: {formatDateTime(data.createdAt)}</span>
-                <span>Ограничение: {data.maxParticipants ?? "—"}</span>
-                <span>Старт: {formatDateTime(data.startsAt)}</span>
-                <span>Завершение: {formatDateTime(data.endsAt)}</span>
+              <CardTitle className='text-2xl'>{survey.title}</CardTitle>
+              {survey.description ? (
+                <CardDescription className='max-w-2xl text-gray-600'>{survey.description}</CardDescription>
+              ) : null}
+              <div className='flex flex-wrap gap-4 text-sm text-gray-500'>
+                <span>ID анкеты: {survey.id}</span>
+                <span>Версия шаблона: {survey.snapshot_version}</span>
+                <span>Шаблон: {rawTemplateTitle ?? survey.template_id ?? '—'}</span>
+                <span>Создана: {createdAtDisplay}</span>
+                <span>Максимум участников: {rawMaxParticipants ?? '—'}</span>
+                <span>Старт: {startsAtDisplay}</span>
+                <span>Завершение: {endsAtDisplay}</span>
+                <span>Всего приглашений: {formatNumber(stats.total_enrollments)}</span>
               </div>
             </div>
             <Sheet open={editOpen} onOpenChange={setEditOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Edit3 className="h-4 w-4" />
+                <Button variant='outline' className='gap-2'>
+                  <Edit3 className='h-4 w-4' />
                   Редактировать
                 </Button>
               </SheetTrigger>
-              <SheetContent className="flex flex-col" side="right">
+              <SheetContent className='flex flex-col' side='right'>
                 <SheetHeader>
                   <SheetTitle>Редактирование анкеты</SheetTitle>
                   <SheetDescription>
                     Обновите основные параметры. Изменения сохранятся сразу после подтверждения.
                   </SheetDescription>
                 </SheetHeader>
-                <div className="flex-1 space-y-4 overflow-y-auto p-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700" htmlFor="survey-title">
+                <div className='flex-1 space-y-4 overflow-y-auto p-4'>
+                  <div className='space-y-2'>
+                    <label className='text-sm font-medium text-gray-700' htmlFor='survey-title'>
                       Название
                     </label>
                     <Input
-                      id="survey-title"
+                      id='survey-title'
                       value={form.title}
-                      onChange={(event) => handleChange("title", event.target.value)}
-                      placeholder="Название анкеты"
+                      onChange={(event) => handleChange('title', event.target.value)}
+                      placeholder='Название анкеты'
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700" htmlFor="survey-description">
+                  <div className='space-y-2'>
+                    <label className='text-sm font-medium text-gray-700' htmlFor='survey-description'>
                       Описание
                     </label>
                     <Textarea
-                      id="survey-description"
+                      id='survey-description'
                       value={form.description}
-                      onChange={(event) => handleChange("description", event.target.value)}
-                      placeholder="Краткое описание анкеты"
+                      onChange={(event) => handleChange('description', event.target.value)}
+                      placeholder='Краткое описание анкеты'
                       rows={4}
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Статус</label>
-                    <Select value={form.status} onValueChange={(value: SurveyStatus) => handleChange("status", value)}>
+                  <div className='space-y-2'>
+                    <label className='text-sm font-medium text-gray-700'>Статус</label>
+                    <Select value={form.status} onValueChange={(value: SurveyStatus) => handleChange('status', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите статус" />
+                        <SelectValue placeholder='Выберите статус' />
                       </SelectTrigger>
                       <SelectContent>
                         {(Object.keys(statusLabels) as SurveyStatus[]).map((status) => (
@@ -300,49 +451,49 @@ export  default  function SurveyDetailPage({
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700" htmlFor="survey-max">
+                  <div className='space-y-2'>
+                    <label className='text-sm font-medium text-gray-700' htmlFor='survey-max'>
                       Максимум участников
                     </label>
                     <Input
-                      id="survey-max"
-                      type="number"
+                      id='survey-max'
+                      type='number'
                       min={1}
                       value={form.maxParticipants}
-                      onChange={(event) => handleChange("maxParticipants", event.target.value)}
-                      placeholder="Не ограничено"
+                      onChange={(event) => handleChange('maxParticipants', event.target.value)}
+                      placeholder='Не ограничено'
                     />
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700" htmlFor="survey-start">
+                  <div className='grid gap-4 md:grid-cols-2'>
+                    <div className='space-y-2'>
+                      <label className='text-sm font-medium text-gray-700' htmlFor='survey-start'>
                         Дата начала
                       </label>
                       <Input
-                        id="survey-start"
-                        type="datetime-local"
+                        id='survey-start'
+                        type='datetime-local'
                         value={form.startsAt}
-                        onChange={(event) => handleChange("startsAt", event.target.value)}
+                        onChange={(event) => handleChange('startsAt', event.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700" htmlFor="survey-end">
+                    <div className='space-y-2'>
+                      <label className='text-sm font-medium text-gray-700' htmlFor='survey-end'>
                         Дата завершения
                       </label>
                       <Input
-                        id="survey-end"
-                        type="datetime-local"
+                        id='survey-end'
+                        type='datetime-local'
                         value={form.endsAt}
-                        onChange={(event) => handleChange("endsAt", event.target.value)}
+                        onChange={(event) => handleChange('endsAt', event.target.value)}
                       />
                     </div>
                   </div>
                 </div>
                 <SheetFooter>
-                  <Button onClick={handleSave} disabled={isPending} className="w-full gap-2">
-                    {isPending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
-                    {isPending ? "Сохранение..." : "Сохранить"}
+                  <Button onClick={handleSave} disabled={isPending} className='w-full gap-2'>
+                    {isPending ? <RefreshCcw className='h-4 w-4 animate-spin' /> : <Edit3 className='h-4 w-4' />}
+                    {isPending ? 'Сохранение...' : 'Сохранить'}
                   </Button>
                 </SheetFooter>
               </SheetContent>
@@ -350,88 +501,249 @@ export  default  function SurveyDetailPage({
           </CardHeader>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <motion.div
+          className='grid gap-4 md:grid-cols-3'
+          initial={fadeInitial}
+          animate={fadeAnimate}
+          transition={{ ...fadeTransition, delay: 0.05 }}
+        >
           {metrics.map((metric) => (
-            <Card key={metric.label}>
-              <CardContent className="p-6">
-                <div className="text-sm text-gray-500">{metric.label}</div>
-                <div className="text-2xl font-semibold text-gray-900">{metric.value}</div>
+            <Card key={metric.label} className='border-none bg-white/85 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
+              <CardContent className='p-6'>
+                <div className='text-xs uppercase tracking-wide text-gray-500'>{metric.label}</div>
+                <div className='text-2xl font-semibold text-gray-900'>{metric.value}</div>
+                {typeof metric.percentage === 'number' ? (
+                  <div className='mt-3 h-2 rounded-full bg-gray-200'>
+                    <div
+                      className='h-2 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]'
+                      style={{ width: `${metric.percentage}%` }}
+                    />
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ))}
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-sm text-gray-500">Процент завершения</div>
-              <div className="text-2xl font-semibold text-gray-900">{completionRate}%</div>
-              <div className="mt-3 h-2 rounded-full bg-gray-200">
-                <div
-                  className="h-2 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
-                  style={{ width: `${completionRate}%` }}
-                />
-              </div>
+        </motion.div>
+
+        <motion.div
+          initial={fadeInitial}
+          animate={fadeAnimate}
+          transition={{ ...fadeTransition, delay: 0.08 }}
+        >
+          <div className='grid gap-4 md:grid-cols-2'>
+            <Card className='border-none bg-white/90 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
+              <CardHeader className='pb-4'>
+                <CardTitle className='text-lg font-semibold text-gray-900'>Технические детали</CardTitle>
+                <CardDescription>Идентификаторы и даты помогут при отладке или поддержке.</CardDescription>
+              </CardHeader>
+              <CardContent className='grid gap-4 sm:grid-cols-2'>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Владелец</div>
+                  <div className='mt-1 text-sm text-gray-900'>{survey.owner_id ?? '—'}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>ID шаблона</div>
+                  <div className='mt-1 text-sm text-gray-900'>{survey.template_id ?? '—'}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Создана</div>
+                  <div className='mt-1 text-sm text-gray-900'>{createdAtDisplay}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Ближайший старт</div>
+                  <div className='mt-1 text-sm text-gray-900'>{startsAtDisplay}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Завершение</div>
+                  <div className='mt-1 text-sm text-gray-900'>{endsAtDisplay}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Максимум участников</div>
+                  <div className='mt-1 text-sm text-gray-900'>{rawMaxParticipants ?? '—'}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className='border-none bg-white/90 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
+              <CardHeader className='pb-4'>
+                <CardTitle className='text-lg font-semibold text-gray-900'>Состояние приглашений</CardTitle>
+                <CardDescription>
+                  Активных: {invitationInsights.active} • Истекших: {invitationInsights.expired} • Истекают в 72ч: {invitationInsights.expiringSoon}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='grid gap-4 sm:grid-cols-2'>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Всего приглашений</div>
+                  <div className='mt-1 text-sm text-gray-900'>{invitationInsights.total}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Активно сейчас</div>
+                  <div className='mt-1 text-sm text-gray-900'>{invitationInsights.active}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Истекают скоро</div>
+                  <div className='mt-1 text-sm text-gray-900'>{invitationInsights.expiringSoon}</div>
+                </div>
+                <div>
+                  <div className='text-xs uppercase tracking-wide text-gray-500'>Ближайшее истечение</div>
+                  <div className='mt-1 text-sm text-gray-900'>{nextExpirationDisplay}</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={fadeInitial}
+          animate={fadeAnimate}
+          transition={{ ...fadeTransition, delay: 0.1 }}
+        >
+          <Card className='border-none bg-white/90 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
+            <CardHeader>
+              <CardTitle>Структура анкеты</CardTitle>
+              <CardDescription>Актуальный снимок формы поможет синхронизировать изменения с бэкендом.</CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-4'>
+              {formSections.length === 0 ? (
+                <div className='rounded-lg border border-dashed border-slate-200 p-6 text-sm text-gray-500'>
+                  Структура формы не найдена в снимке анкеты.
+                </div>
+              ) : (
+                formSections.map((section, sectionIndex) => (
+                  <div
+                    key={section.code ?? section.title ?? `section-${sectionIndex}`}
+                    className='rounded-xl border border-slate-200/70 bg-slate-50/60 p-4 shadow-sm'
+                  >
+                    <div className='flex flex-wrap items-start justify-between gap-2'>
+                      <div>
+                        <div className='text-sm font-semibold text-gray-900'>{section.title ?? section.code ?? 'Без названия'}</div>
+                        <div className='text-xs text-gray-500'>Код: {section.code ?? '—'}</div>
+                      </div>
+                      {section.repeatable ? (
+                        <span className='inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-emerald-700'>
+                          Повторяемый блок
+                        </span>
+                      ) : null}
+                    </div>
+                    {section.fields.length ? (
+                      <ul className='mt-3 space-y-2'>
+                        {section.fields.map((field, fieldIndex) => {
+                          const fieldKey = field.code ?? field.title ?? field.label ?? `field-${fieldIndex}`
+                          return (
+                            <li key={fieldKey} className='rounded-lg bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/60'>
+                              <div className='flex items-start justify-between gap-2'>
+                                <div className='text-sm font-medium text-gray-900'>
+                                  {field.label ?? field.title ?? field.code ?? 'Поле без названия'}
+                                </div>
+                                {field.required ? (
+                                  <span className='inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-rose-700'>
+                                    Обязательное
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className='mt-1 text-xs text-gray-500'>
+                                Тип: {field.type ?? '—'} • Код: {field.code ?? '—'}
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    ) : (
+                      <div className='mt-3 rounded-lg border border-dashed border-slate-200/80 px-3 py-2 text-xs text-gray-500'>
+                        В разделе нет полей.
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Участники и прогресс</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {participantRows.length === 0 ? (
-              <div className="p-6 text-sm text-gray-500">Пока нет участников для отображения</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-left">
-                  <thead className="bg-gray-50 text-sm font-medium text-gray-600">
-                    <tr>
-                      <th className="px-4 py-3">Участник</th>
-                      <th className="px-4 py-3">Контакты</th>
-                      <th className="px-4 py-3">Статус</th>
-                      <th className="px-4 py-3">Прогресс</th>
-                      <th className="px-4 py-3">Активность</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {participantRows.map((participant) => renderParticipantRow(participant))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </>
+        <motion.div
+          initial={fadeInitial}
+          animate={fadeAnimate}
+          transition={{ ...fadeTransition, delay: 0.12 }}
+        >
+          <Card className='border-none bg-white/90 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
+            <CardHeader>
+              <CardTitle>Приглашения</CardTitle>
+              <CardDescription>Список приглашённых участников и срок действия их ссылок.</CardDescription>
+            </CardHeader>
+            <CardContent className='p-0'>
+              {invitations.length === 0 ? (
+                <div className='p-6 text-sm text-gray-500'>Пока нет приглашений для отображения.</div>
+              ) : (
+                <div className='overflow-x-auto'>
+                  <table className='min-w-full divide-y divide-gray-200 text-left'>
+                    <thead className='bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500'>
+                      <tr>
+                        <th className='px-4 py-3'>Участник</th>
+                        <th className='px-4 py-3'>Email</th>
+                        <th className='px-4 py-3'>Срок действия</th>
+                        <th className='px-4 py-3'>Токен</th>
+                      </tr>
+                    </thead>
+                    <tbody className='divide-y divide-gray-100'>
+                      {invitations.map((invitation) => {
+                        const tokenDisplay = truncateToken(invitation.token)
+                        return (
+                          <tr key={invitation.enrollment_id} className='text-sm text-gray-700'>
+                            <td className='px-4 py-3'>
+                              <div className='font-medium text-gray-900'>{invitation.full_name || '—'}</div>
+                              <div className='text-xs text-gray-500'>ID: {invitation.enrollment_id}</div>
+                            </td>
+                            <td className='px-4 py-3'>{invitation.email || '—'}</td>
+                            <td className='px-4 py-3'>{formatDateTime(invitation.expires_at)}</td>
+                            <td className='px-4 py-3 font-mono text-xs text-gray-600' title={invitation.token}>
+                              {tokenDisplay}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <Link href="/admin/survey" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Назад к списку
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <motion.div
+        className='mb-6 flex items-center justify-between'
+        initial={fadeInitial}
+        animate={fadeAnimate}
+        transition={fadeTransition}
+      >
+        <Link href='/admin/survey' className='inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900'>
+          <ArrowLeft className='h-4 w-4' /> Назад к списку
         </Link>
-        <Button variant="ghost" size="icon" onClick={() => refetch()}>
-          <RefreshCcw className="h-4 w-4" />
+        <Button variant='ghost' size='icon' onClick={() => refetch()}>
+          <RefreshCcw className='h-4 w-4' />
         </Button>
-      </div>
+      </motion.div>
 
-      {isError ? (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-2">
-              <span className="text-lg font-semibold text-red-700">Не удалось загрузить данные</span>
-              <p className="text-sm text-red-600">Попробуйте обновить страницу или повторить попытку позже.</p>
-              <div>
-                <Button onClick={() => refetch()} variant="outline" className="gap-2">
-                  <RefreshCcw className="h-4 w-4" /> Повторить запрос
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">{renderContent()}</div>
-      )}
+      {isError ? <ErrorFetch refetch={refetch}/> : renderContent()}
     </div>
   )
+}
+
+function toInputDateTime(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function parseDateTime(value: string) {
+  if (!value) return null
+  const iso = new Date(value)
+  if (Number.isNaN(iso.getTime())) return null
+  return iso.toISOString()
 }

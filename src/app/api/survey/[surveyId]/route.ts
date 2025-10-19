@@ -1,7 +1,7 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { getApiBaseUrl } from '@/shared/api/base-url'
+import type {NextRequest} from 'next/server'
+import {NextResponse} from 'next/server'
+import {cookies} from 'next/headers'
+import {getApiBaseUrl} from '@/shared/api/base-url'
 
 async function ensureAccess() {
   const jar = await cookies()
@@ -20,6 +20,7 @@ async function forwardRequest(
   init: RequestInit,
 ) {
   const url = new URL(req.url)
+  console.log(`${getApiBaseUrl()}/api/survey/${surveyId}${url.search}`,init)
   const upstream = await fetch(`${getApiBaseUrl()}/api/survey/${surveyId}${url.search}`, {
     ...init,
     cache: 'no-store',

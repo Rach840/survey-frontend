@@ -2,6 +2,7 @@
 
 import {useMutation} from '@tanstack/react-query'
 import {useRouter} from 'next/navigation'
+import {apiFetch, invalidateApiFetchCache} from '@/shared'
 import type {SurveyStatus} from '@/entities/surveys/types'
 
 export type EnrollmentCreatePayload = {
@@ -27,9 +28,8 @@ export function useSurveyCreate() {
 
   return useMutation({
     mutationFn: async (payload: CreateSurveyPayload) => {
-      const response = await fetch('/api/survey/create', {
+      const response = await apiFetch('/api/survey/create', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       })
@@ -41,6 +41,7 @@ export function useSurveyCreate() {
       return response.json().catch(() => null)
     },
     onSuccess: () => {
+      invalidateApiFetchCache('/api/survey')
       router.push('/admin/survey')
       router.refresh()
     },

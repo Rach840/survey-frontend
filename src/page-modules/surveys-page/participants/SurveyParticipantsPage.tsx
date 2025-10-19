@@ -1,13 +1,19 @@
 'use client'
 
+import {useMemo, useState} from 'react'
 import Link from 'next/link'
-import {ArrowLeft, RefreshCcw} from 'lucide-react'
+import {motion} from 'motion/react'
+import {ArrowLeft, FileSpreadsheet, Filter} from 'lucide-react'
 
 import {useSurveyDetail} from '@/entities/surveys/model/surveyDetailQuery'
 import type {SurveyParticipant} from '@/entities/surveys/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Button} from '@/shared/ui/button'
 import {Skeleton} from '@/shared/ui/skeleton'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/shared/ui/select'
+import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
+import {toast} from 'sonner'
+import {loadXlsx} from '@/shared/lib/loadXlsx'
 
 const enrollmentLabels: Record<string, string> = {
   invited: 'Приглашён',
@@ -25,92 +31,132 @@ const responseLabels: Record<string, string> = {
 }
 
 export default function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
-  console.log(surveyId)
   const { data, isLoading, isError, refetch } = useSurveyDetail(surveyId)
-  console.log(data)
-  const participants: SurveyParticipant[] = data?.invitations ?? []
+  const participants = useMemo<SurveyParticipant[]>(
+    () => data?.participants ?? data?.invitations ?? [],
+    [data?.participants, data?.invitations],
+  )
+  const [stateFilter, setStateFilter] = useState<string>('all')
+
+  const handleExport = async () => {
+    if (!participants.length) {
+      toast.info('Список участников пуст')
+      return
+    }
+
+    try {
+      const XLSX = await loadXlsx()
+      const worksheet = XLSX.utils.json_to_sheet(
+        participants.map((participant, index) => ({
+          index: index + 1,
+          fullName: participant.fullName,
+          email: participant.email ?? '',
+          state: participant.state,
+          responseState: participant.responseState ?? '',
+        })),
+      )
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Participants')
+      XLSX.writeFile(workbook, `survey-${surveyId}-participants.xlsx`)
+    } catch (error) {
+      console.error('participants export error', error)
+      toast.error('Не удалось сформировать файл')
+    }
+  }
+
+  const filteredParticipants = useMemo(() => {
+    if (stateFilter === 'all') {
+      return participants
+    }
+    return participants.filter((participant) => participant.state === stateFilter)
+  }, [participants, stateFilter])
 
   if (isLoading) {
     return (
-      <div className='space-y-4 p-8'>
-        <Skeleton className='h-20 w-full' />
-        <Skeleton className='h-12 w-64' />
-        <Skeleton className='h-64 w-full' />
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+        <motion.div
+          className='space-y-4'
+          initial='hidden'
+          animate='show'
+          variants={fadeUpVariants}
+          transition={fadeTransition}
+        >
+          <Skeleton className='h-20 w-full rounded-2xl' />
+          <Skeleton className='h-12 w-64 rounded-2xl' />
+          <Skeleton className='h-64 w-full rounded-2xl' />
+        </motion.div>
       </div>
     )
   }
 
   if (isError || !data) {
-    return (
-      <div className='p-8'>
-        <Card className='border-red-200 bg-red-50'>
-          <CardContent className='space-y-3 p-6'>
-            <CardTitle className='text-lg text-red-700'>Не удалось загрузить участников</CardTitle>
-            <CardDescription className='text-red-600'>Попробуйте обновить страницу или повторите попытку позже.</CardDescription>
-            <div className='flex gap-3'>
-              <Button onClick={() => refetch()} variant='outline' className='gap-2'>
-                <RefreshCcw className='h-4 w-4' />
-                Повторить запрос
-              </Button>
-              <Link href={`/admin/survey/${surveyId}`}>
-                <Button variant='ghost' className='gap-2'>
-                  <ArrowLeft className='h-4 w-4' />
-                  Назад к анкете
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+
   }
 
   return (
-    <div className='space-y-8 p-8'>
-      <div className='flex items-center justify-between'>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <motion.div
+        className='flex flex-wrap items-center justify-between gap-4'
+        initial='hidden'
+        animate='show'
+        variants={fadeUpVariants}
+        transition={fadeTransition}
+      >
         <Link href={`/admin/survey/${surveyId}`} className='text-sm text-gray-600 hover:text-gray-900'>
           <span className='inline-flex items-center gap-2'>
             <ArrowLeft className='h-4 w-4' />
             Назад к анкете
           </span>
         </Link>
-        <Link href={`/admin/survey/${surveyId}/results`} className='text-sm text-[#2563eb] hover:underline'>
-          Смотреть результаты и экспорт
-        </Link>
-      </div>
+        <div className='flex items-center gap-3'>
+          <Link href={`/admin/survey/${surveyId}/results`} className='text-sm text-[#2563eb] hover:underline'>
+            Смотреть результаты
+          </Link>
+          <Button variant='outline' className='gap-2' onClick={handleExport}>
+            <FileSpreadsheet className='h-4 w-4' />
+            Экспортировать список
+          </Button>
+        </div>
+      </motion.div>
 
-      <Card>
+      <motion.div
+        initial='hidden'
+        animate='show'
+        variants={fadeUpVariants}
+        transition={{ ...fadeTransition, delay: 0.05 }}
+      >
+      <Card className='border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
         <CardHeader className='border-b pb-6'>
           <CardTitle className='text-2xl font-semibold text-gray-900'>Участники анкеты</CardTitle>
           <CardDescription className='text-gray-600'>Следите за статусами и открывайте карточки для экспорта в PDF.</CardDescription>
         </CardHeader>
         <CardContent className='space-y-4 py-6'>
-          {/*<div className='flex flex-wrap items-center gap-4'>*/}
-          {/*  <div className='inline-flex items-center gap-2 text-sm text-gray-600'>*/}
-          {/*    <Filter className='h-4 w-4' />*/}
-          {/*    Фильтр по статусу*/}
-          {/*  </div>*/}
-          {/*  <Select value={stateFilter} onValueChange={setStateFilter}>*/}
-          {/*    <SelectTrigger className='w-[220px]'>*/}
-          {/*      <SelectValue placeholder='Все статусы' />*/}
-          {/*    </SelectTrigger>*/}
-          {/*    <SelectContent>*/}
-          {/*      <SelectItem value='all'>Все статусы</SelectItem>*/}
-          {/*      {Object.entries(enrollmentLabels).map(([key, label]) => (*/}
-          {/*        <SelectItem key={key} value={key}>*/}
-          {/*          {label}*/}
-          {/*        </SelectItem>*/}
-          {/*      ))}*/}
-          {/*    </SelectContent>*/}
-          {/*  </Select>*/}
-          {/*  {stateFilter !== 'all' ? (*/}
-          {/*    <Button variant='link' className='h-auto px-0 text-[#2563eb]' onClick={() => setStateFilter('all')}>*/}
-          {/*      Сбросить фильтр*/}
-          {/*    </Button>*/}
-          {/*  ) : null}*/}
-          {/*</div>*/}
+          <div className='flex flex-wrap items-center gap-4'>
+            <div className='inline-flex items-center gap-2 text-sm text-gray-600'>
+              <Filter className='h-4 w-4' />
+              Фильтр по статусу
+            </div>
+            <Select value={stateFilter} onValueChange={setStateFilter}>
+              <SelectTrigger className='w-[220px]'>
+                <SelectValue placeholder='Все статусы' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>Все статусы</SelectItem>
+                {Object.entries(enrollmentLabels).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {stateFilter !== 'all' ? (
+              <Button variant='link' className='h-auto px-0 text-[#2563eb]' onClick={() => setStateFilter('all')}>
+                Сбросить фильтр
+              </Button>
+            ) : null}
+          </div>
 
-          {participants.length === 0 ? (
+          {filteredParticipants.length === 0 ? (
             <div className='rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-gray-500'>
               Участники пока не найдены.
             </div>
@@ -126,10 +172,10 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                   </tr>
                 </thead>
                 <tbody className='divide-y divide-gray-100 text-sm text-gray-700'>
-                  {participants.map((participant) => (
+                  {filteredParticipants.map((participant) => (
                     <tr key={participant.id} className='transition-colors hover:bg-slate-50'>
                       <td className='px-4 py-3'>
-                        <div className='font-medium text-gray-900'>{participant.full_name}</div>
+                        <div className='font-medium text-gray-900'>{participant.fullName}</div>
                         <div className='text-xs text-gray-500'>Источник: {participant.source === 'bot' ? 'бот' : 'админ'}</div>
                       </td>
                       <td className='px-4 py-3'>{participant.email ?? '—'}</td>
@@ -155,6 +201,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
           )}
         </CardContent>
       </Card>
+      </motion.div>
     </div>
   )
 }
