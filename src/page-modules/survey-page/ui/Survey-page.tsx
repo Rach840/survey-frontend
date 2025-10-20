@@ -6,7 +6,9 @@ import {AlertCircle, CheckCircle2, RefreshCcw} from 'lucide-react'
 import {toast} from 'sonner'
 
 import {publicSurveySessionKey, submitPublicSurveyResponse, usePublicSurveySession,} from '@/entities/public-survey'
+import type {SurveySubmissionAnswer} from '@/entities/public-survey'
 import {sectionsToDynamicForm} from '@/entities/templates/lib/toDynamicForm'
+import type {TemplateField, TemplateSection} from '@/entities/templates/types'
 import type {EnrollmentState, ResponseState, SurveyStatus} from '@/entities/surveys/types'
 import {GeneratedForm} from '@/features/template/generated'
 import {Button} from '@/shared/ui/button'
@@ -44,6 +46,173 @@ const surveyStatusLabels: Partial<Record<SurveyStatus, string>> = {
   open: 'Открыта',
   closed: 'Закрыта',
   archived: 'Архивирована',
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+type SubmissionAnswerValue = Partial<Omit<SurveySubmissionAnswer, 'question_code' | 'section_code' | 'repeat_path'>>
+
+function mapFieldValue(field: TemplateField, raw: unknown): SubmissionAnswerValue | null {
+  if (raw === undefined || raw === null) {
+    return null
+  }
+
+  const fieldType = field.type as TemplateField['type'] | 'checkbox'
+
+  if (typeof raw === 'string' && raw.trim().length === 0) {
+    return null
+  }
+
+  switch (fieldType) {
+    case 'number': {
+      if (typeof raw === 'number' && !Number.isNaN(raw)) {
+        return { value_number: raw }
+      }
+      if (typeof raw === 'string') {
+        const numeric = Number(raw)
+        if (!Number.isNaN(numeric)) {
+          return { value_number: numeric }
+        }
+      }
+      return null
+    }
+    case 'date': {
+      if (typeof raw === 'string') {
+        return { value_date: raw }
+      }
+      return null
+    }
+    case 'select_one':
+    case 'text': {
+      if (typeof raw === 'string') {
+        return { value_text: raw }
+      }
+      if (typeof raw === 'number' || typeof raw === 'boolean') {
+        return { value_text: String(raw) }
+      }
+      break
+    }
+    case 'select_multiple': {
+      if (Array.isArray(raw)) {
+        const filtered = raw.filter((item) => {
+          if (item === null || item === undefined) {
+            return false
+          }
+          if (typeof item === 'string') {
+            return item.trim().length > 0
+          }
+          return true
+        })
+        if (filtered.length === 0) {
+          return null
+        }
+        return { value_json: filtered }
+      }
+      if (typeof raw === 'string') {
+        return { value_json: [raw] }
+      }
+      if (isPlainRecord(raw)) {
+        const keys = Object.keys(raw)
+        if (keys.length === 0) {
+          return null
+        }
+        return { value_json: raw }
+      }
+      break
+    }
+    case 'checkbox': {
+      if (typeof raw === 'boolean') {
+        return { value_bool: raw }
+      }
+      if (raw === 0 || raw === 1) {
+        return { value_bool: Boolean(raw) }
+      }
+      return null
+    }
+    default:
+      break
+  }
+
+  if (typeof raw === 'boolean') {
+    return { value_bool: raw }
+  }
+  if (typeof raw === 'number') {
+    if (Number.isNaN(raw)) {
+      return null
+    }
+    return { value_number: raw }
+  }
+  if (typeof raw === 'string') {
+    return { value_text: raw }
+  }
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) {
+      return null
+    }
+    return { value_json: raw }
+  }
+  if (isPlainRecord(raw)) {
+    const keys = Object.keys(raw)
+    if (keys.length === 0) {
+      return null
+    }
+    return { value_json: raw }
+  }
+
+  return null
+}
+
+function buildSubmissionAnswers(sections: TemplateSection[], values: Record<string, unknown>): SurveySubmissionAnswer[] {
+  const answers: SurveySubmissionAnswer[] = []
+
+  for (const section of sections) {
+    const sectionValue = values[section.code]
+
+    if (Array.isArray(sectionValue)) {
+      sectionValue.forEach((entry, index) => {
+        if (!isPlainRecord(entry)) {
+          return
+        }
+
+        section.fields.forEach((field) => {
+          const fieldValue = mapFieldValue(field, entry[field.code])
+          if (!fieldValue) {
+            return
+          }
+
+          answers.push({
+            question_code: field.code,
+            section_code: section.code,
+            repeat_path: `${section.code}:${index}`,
+            ...fieldValue,
+          })
+        })
+      })
+
+      continue
+    }
+
+    if (!isPlainRecord(sectionValue)) {
+      continue
+    }
+
+    section.fields.forEach((field) => {
+      const fieldValue = mapFieldValue(field, sectionValue[field.code])
+      if (!fieldValue) {
+        return
+      }
+
+      answers.push({
+        question_code: field.code,
+        section_code: section.code,
+        ...fieldValue,
+      })
+    })
+  }
+
+  return answers
 }
 
 function readDraft(key: string): DraftPayload | null {
@@ -107,6 +276,7 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
   }, [data, token])
 
   const isSubmitted = data?.response?.state === 'submitted'
+  const formSections = data?.survey.formSnapshot
 
   useEffect(() => {
     if (!data || !storageKey) {
@@ -138,10 +308,11 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
   }, [])
 
   const mutation = useMutation({
-    mutationFn: async (answers: Record<string, unknown>) => {
-      return submitPublicSurveyResponse( token, {
-        answers,
+    mutationFn: async (answers: SurveySubmissionAnswer[]) => {
+      return submitPublicSurveyResponse({
+        token,
         channel: 'web',
+        answers,
       })
     },
     onSuccess: async () => {
@@ -160,14 +331,20 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
-      console.log(values)
       if (isSubmitted) {
         toast.info('Ответ уже отправлен.')
         return
       }
-      await mutation.mutateAsync(values)
+
+      if (!formSections) {
+        toast.error('Не удалось определить структуру анкеты.')
+        return
+      }
+
+      const answers = buildSubmissionAnswers(formSections, values)
+      await mutation.mutateAsync(answers)
     },
-    [isSubmitted, mutation],
+    [formSections, isSubmitted, mutation],
   )
 
   const handleChange = useCallback(

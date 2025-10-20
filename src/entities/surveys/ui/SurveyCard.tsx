@@ -1,6 +1,6 @@
 import {Button, Card, CardContent, CardHeader, CardTitle} from '@/shared'
 import Link from 'next/link'
-import {BarChart3, FileSpreadsheet, Pencil, Users} from 'lucide-react'
+import {BarChart3, FileSpreadsheet, Pencil} from 'lucide-react'
 import type {SurveyResult} from '@/entities/surveys/types'
 
 const statusLabels: Record<string, string> = {
@@ -76,7 +76,7 @@ export default function SurveyCard({survey}: {survey: SurveyResult}) {
           </Link>
           <Link href={`/admin/survey/${surveyInfo.id}/participants`}>
             <Button variant='outline' className='w-full gap-2 transition-transform hover:-translate-y-0.5'>
-              <Users className='h-4 w-4' />
+
               Участники
             </Button>
           </Link>

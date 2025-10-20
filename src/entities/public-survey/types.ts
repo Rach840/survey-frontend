@@ -40,7 +40,20 @@ export interface PublicSurveySession {
   response?: PublicSurveyResponse
 }
 
-export type PublicSurveySubmitPayload = {
-  answers: Record<string, unknown>
+export interface SurveySubmissionAnswer {
+  question_code: string
+  section_code?: string
+  repeat_path?: string
+  value_text?: string
+  value_number?: number
+  value_bool?: boolean
+  value_date?: string
+  value_datetime?: string
+  value_json?: unknown
+}
+
+export interface PublicSurveySubmitPayload {
+  token: string
   channel?: 'web' | 'tg_webapp' | 'api'
+  answers: SurveySubmissionAnswer[]
 }

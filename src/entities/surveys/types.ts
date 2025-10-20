@@ -29,6 +29,8 @@ export interface SurveyParticipant {
   progress: number
   lastActivity?: string | null
   submittedAt?: string | null
+  expires_at?: string | null
+  token_expires_at?: string | null
 }
 
 export interface SurveyDetail {
@@ -80,6 +82,8 @@ export interface SurveyResultsStatistics {
   responses_in_progress: number
   completion_rate: number
   overall_progress: number
+  average_completion_seconds?: number | null
+  average_completion_duration?: string | null
 }
 
 export interface SurveyResult {
@@ -89,6 +93,53 @@ export interface SurveyResult {
 }
 
 export type SurveyStatisticsResponse = SurveyResult
+
+export interface SurveyResultsEnrollment {
+  id: number
+  survey_id: number
+  full_name: string
+  email?: string | null
+  phone?: string | null
+  state: EnrollmentState
+  token_expires_at?: string | null
+  use_limit?: number | null
+  used_count?: number | null
+}
+
+export interface SurveyResultsResponseMeta {
+  id: number
+  survey_id: number
+  enrollment_id: number
+  state: ResponseState
+  channel?: string | null
+  started_at?: string | null
+  submitted_at?: string | null
+}
+
+export interface SurveyResultsAnswer {
+  question_code: string
+  section_code?: string | null
+  repeat_path?: string | null
+  value_text?: string | null
+  value_number?: number | null
+  value_bool?: boolean | null
+  value_date?: string | null
+  value_datetime?: string | null
+  value_json?: unknown
+}
+
+export interface SurveyResultsItem {
+  survey: Survey
+  enrollment: SurveyResultsEnrollment
+  response: SurveyResultsResponseMeta
+  answers: SurveyResultsAnswer[]
+}
+
+export interface SurveyResultsPayload {
+  survey: Survey
+  results: SurveyResultsItem[]
+  statistics: SurveyResultsStatistics
+}
 
 export type UpdateSurveyPayload = Partial<{
   title: string

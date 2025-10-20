@@ -45,10 +45,16 @@ export default function CreateSurveyPage() {
             max_participants: 10,
             status: "draft",
             title: "",
-            public_slug: ""
+            public_slug: "",
+            starts_at: undefined,
+            ends_at: undefined,
         },
         mode: "onTouched",
     });
+
+    const slugValue = createForm.watch('public_slug')
+    const slugPreview = slugify(slugValue || "")
+    const startsAtValue = createForm.watch('starts_at')
 
     const handleSubmit = async () => {
         const normalizedParticipants = participants
@@ -83,8 +89,27 @@ export default function CreateSurveyPage() {
         toast.error(Object.values(z.flattenError(data.error)).flat().map(er=> Object.values(er).toString()).flat().toString())
         return
     } else {
+        const startsAtDate = data.data.starts_at ? new Date(data.data.starts_at) : null
+        const endsAtDate = data.data.ends_at ? new Date(data.data.ends_at) : null
+
+        if (startsAtDate && Number.isNaN(startsAtDate.getTime())) {
+            toast.error("Некорректная дата начала анкеты")
+            return
+        }
+
+        if (endsAtDate && Number.isNaN(endsAtDate.getTime())) {
+            toast.error("Некорректная дата окончания анкеты")
+            return
+        }
+
+        const payload = {
+            ...data.data,
+            starts_at: startsAtDate ? startsAtDate.toISOString() : undefined,
+            ends_at: endsAtDate ? endsAtDate.toISOString() : undefined,
+        }
+
         try {
-            await mutateAsync(data.data)
+            await mutateAsync(payload)
             toast.success("Анкета создана")
         } catch  {
             toast.error("Не удалось создать анкету")
@@ -164,8 +189,7 @@ export default function CreateSurveyPage() {
 
                                     />
                                     <FieldDescription>
-                                            Ссылка для участников: /survey/{createForm.getValues("public_slug") || 'ваш-слаг'}
-
+                                        Ссылка для участников: /survey/{slugPreview || 'ваш-слаг'}
                                     </FieldDescription>
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -210,6 +234,51 @@ export default function CreateSurveyPage() {
                                 </Field>
                             )}
                         />
+                        <div className='grid gap-4 md:grid-cols-2'>
+                            <Controller
+                                name="starts_at"
+                                control={createForm.control}
+                                render={({ field, fieldState }) => (
+                                    <Field data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="form-survey-create-startsAt">
+                                            Дата начала анкеты
+                                        </FieldLabel>
+                                        <Input
+                                            id="form-survey-create-startsAt"
+                                            type='datetime-local'
+                                            value={field.value ?? ''}
+                                            onChange={(event) => field.onChange(event.target.value || undefined)}
+                                            onBlur={field.onBlur}
+                                            aria-invalid={fieldState.invalid}
+                                        />
+                                        <FieldDescription>Оставьте пустым, чтобы анкета стала доступна сразу после создания</FieldDescription>
+                                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                                    </Field>
+                                )}
+                            />
+                            <Controller
+                                name="ends_at"
+                                control={createForm.control}
+                                render={({ field, fieldState }) => (
+                                    <Field data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="form-survey-create-endsAt">
+                                            Дата окончания анкеты
+                                        </FieldLabel>
+                                        <Input
+                                            id="form-survey-create-endsAt"
+                                            type='datetime-local'
+                                            value={field.value ?? ''}
+                                            min={startsAtValue ?? undefined}
+                                            onChange={(event) => field.onChange(event.target.value || undefined)}
+                                            onBlur={field.onBlur}
+                                            aria-invalid={fieldState.invalid}
+                                        />
+                                        <FieldDescription>Оставьте пустым, чтобы анкета оставалась доступной без ограничений</FieldDescription>
+                                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                                    </Field>
+                                )}
+                            />
+                        </div>
                     </form>
                 </CardContent>
             </Card>

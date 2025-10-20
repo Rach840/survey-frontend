@@ -1,33 +1,21 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/shared/api/base-url'
+import type {NextRequest} from 'next/server'
+import {NextResponse} from 'next/server'
+import {getApiBaseUrl} from '@/shared/api/base-url'
 
 const API_BASE = getApiBaseUrl()
 
-function getAuthHeader(req: NextRequest) {
-  const authorization = req.headers.get('authorization')
-  if (!authorization) {
-    throw new Response('Missing token', { status: 401 })
-  }
-  return authorization
-}
-
 export async function POST(
   req: NextRequest,
-  context: { params: Promise<{ publicSlug: string }> },
 ) {
   try {
-    const { publicSlug } = await context.params
-    const authorization = getAuthHeader(req)
     const payload = await req.json()
-
+      console.log('хуесос',payload)
     const upstream = await fetch(
-      `${API_BASE}/api/public/survey/${encodeURIComponent(publicSlug)}/responses`,
+      `${API_BASE}/api/survey/response`,
       {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          Authorization: authorization,
         },
         body: JSON.stringify(payload),
         cache: 'no-store',

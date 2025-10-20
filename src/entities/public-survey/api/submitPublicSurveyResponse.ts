@@ -1,11 +1,8 @@
 import type {PublicSurveySubmitPayload} from '../types'
 
-export async function submitPublicSurveyResponse(
-  token: string,
-  payload: PublicSurveySubmitPayload,
-) {
+export async function submitPublicSurveyResponse(payload: PublicSurveySubmitPayload) {
   const response = await fetch(
-    `/api/public/survey/${encodeURIComponent(token)}/responses`,
+    `/api/public/survey/responses`,
     {
       method: 'POST',
       headers: {

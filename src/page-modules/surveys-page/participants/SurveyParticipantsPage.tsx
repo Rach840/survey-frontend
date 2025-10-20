@@ -1,19 +1,26 @@
 'use client'
 
+import {useMutation} from '@tanstack/react-query'
 import {useMemo, useState} from 'react'
 import Link from 'next/link'
 import {motion} from 'motion/react'
-import {ArrowLeft, FileSpreadsheet, Filter} from 'lucide-react'
+import {ArrowLeft, FileSpreadsheet, Filter, Plus, Trash2} from 'lucide-react'
 
 import {useSurveyDetail} from '@/entities/surveys/model/surveyDetailQuery'
 import type {SurveyParticipant} from '@/entities/surveys/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Button} from '@/shared/ui/button'
+import {Input} from '@/shared/ui/input'
 import {Skeleton} from '@/shared/ui/skeleton'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/shared/ui/select'
+import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle} from '@/shared/ui/sheet'
 import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
 import {toast} from 'sonner'
 import {loadXlsx} from '@/shared/lib/loadXlsx'
+import ErrorFetch from '@/widgets/FetchError/ErrorFetch'
+import {extendEnrollmentToken} from '@/entities/surveys/api/extendEnrollmentToken'
+import {addSurveyParticipant} from '@/entities/surveys/api/addSurveyParticipant'
+import {removeSurveyParticipant} from '@/entities/surveys/api/removeSurveyParticipant'
 
 const enrollmentLabels: Record<string, string> = {
   invited: 'Приглашён',
@@ -30,6 +37,57 @@ const responseLabels: Record<string, string> = {
   submitted: 'Завершено',
 }
 
+const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—'
+  try {
+    return dateTimeFormatter.format(new Date(value))
+  } catch {
+    return value
+  }
+}
+
+function getParticipantTokenExpiry(participant?: SurveyParticipant | null) {
+  if (!participant) return null
+  return participant.expires_at ??  null
+}
+
+const DEFAULT_EXTENSION_DAYS = 7
+const LONG_EXTENSION_DAYS = 30
+
+function computeExtensionDate(current?: string | null, days = DEFAULT_EXTENSION_DAYS) {
+  const now = new Date()
+  let base = current ? new Date(current) : now
+  if (Number.isNaN(base.getTime())) {
+    base = now
+  }
+  if (base.getTime() < now.getTime()) {
+    base = now
+  }
+  const result = new Date(base.getTime())
+  result.setDate(result.getDate() + days)
+  return result
+}
+
+function toLocalInputValue(date: Date | null) {
+  if (!date) return ''
+  const pad = (v: number) => v.toString().padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function fromLocalInputValue(value: string) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+  return date
+}
+
 export default function SurveyParticipantsPage({ surveyId }: { surveyId: string }) {
   const { data, isLoading, isError, refetch } = useSurveyDetail(surveyId)
   const participants = useMemo<SurveyParticipant[]>(
@@ -37,6 +95,132 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
     [data?.participants, data?.invitations],
   )
   const [stateFilter, setStateFilter] = useState<string>('all')
+  const [extendTarget, setExtendTarget] = useState<SurveyParticipant | null>(null)
+  const [extendValue, setExtendValue] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const [addFullName, setAddFullName] = useState('')
+  const [addEmail, setAddEmail] = useState('')
+  const [addPhone, setAddPhone] = useState('')
+
+  const addMutation = useMutation({
+    mutationFn: async ({ full_name, email, phone }: { full_name: string; email?: string; phone?: string }) =>
+      addSurveyParticipant({ surveyId, full_name, email, phone }),
+    onSuccess: () => {
+      toast.success('Участник добавлен')
+      setAddFullName('')
+      setAddEmail('')
+      setAddPhone('')
+      setAddOpen(false)
+      refetch()
+    },
+    onError: () => {
+      toast.error('Не удалось добавить участника')
+    },
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: async (enrollmentId: number) =>
+      removeSurveyParticipant({ surveyId, enrollmentId: String(enrollmentId) }),
+    onSuccess: () => {
+      toast.success('Участник удалён')
+      refetch()
+    },
+    onError: () => {
+      toast.error('Не удалось удалить участника')
+    },
+  })
+
+  const extendMutation = useMutation({
+    mutationFn: async ({ enrollmentId, expiresAt }: { enrollmentId: number; expiresAt: string }) =>
+      extendEnrollmentToken({ surveyId, enrollmentId: String(enrollmentId), expiresAt }),
+    onSuccess: () => {
+      toast.success('Срок действия токена продлён')
+      setExtendTarget(null)
+      setExtendValue('')
+      refetch()
+    },
+    onError: () => {
+      toast.error('Не удалось продлить токен')
+    },
+  })
+
+  const handleOpenExtend = (participant: SurveyParticipant) => {
+    const nextDefault = computeExtensionDate(getParticipantTokenExpiry(participant), DEFAULT_EXTENSION_DAYS)
+    setExtendValue(toLocalInputValue(nextDefault))
+    setExtendTarget(participant)
+  }
+
+  const handleQuickExtend = (days: number) => {
+    if (!extendTarget) return
+    const nextDefault = computeExtensionDate(getParticipantTokenExpiry(extendTarget), days)
+    setExtendValue(toLocalInputValue(nextDefault))
+  }
+
+  const handleExtendSubmit = async () => {
+    if (!extendTarget) return
+    if (!extendValue) {
+      toast.error('Укажите новую дату истечения')
+      return
+    }
+    const parsed = fromLocalInputValue(extendValue)
+    if (!parsed) {
+      toast.error('Некорректная дата истечения')
+      return
+    }
+
+    try {
+      await extendMutation.mutateAsync({
+        enrollmentId: extendTarget.id,
+        expiresAt: parsed.toISOString(),
+      })
+    } catch {
+      // errors handled in mutation callbacks
+    }
+  }
+
+  const handleOpenAdd = () => {
+    setAddFullName('')
+    setAddEmail('')
+    setAddPhone('')
+    setAddOpen(true)
+  }
+
+  const handleAddSubmit = async () => {
+    const fullName = addFullName.trim()
+    const email = addEmail.trim()
+    const phone = addPhone.trim()
+
+    if (!fullName) {
+      toast.error('Введите имя участника')
+      return
+    }
+
+    if (!email) {
+      toast.error('Укажите email участника')
+      return
+    }
+
+    try {
+      await addMutation.mutateAsync({
+        full_name: fullName,
+        email,
+        phone: phone ? phone : undefined,
+      })
+    } catch (error) {
+      console.error('add participant error', error)
+    }
+  }
+
+  const handleRemoveParticipant = (participant: SurveyParticipant) => {
+    if (!participant.id) return
+    const displayName = participant.fullName || participant.email || String(participant.id)
+    const confirmed = window.confirm(`Удалить участника "${displayName}"?`)
+    if (!confirmed) {
+      return
+    }
+
+    removeMutation.mutate(participant.id)
+  }
 
   const handleExport = async () => {
     if (!participants.length) {
@@ -90,7 +274,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
   }
 
   if (isError || !data) {
-
+    return <ErrorFetch refetch={refetch} />
   }
 
   return (
@@ -109,6 +293,10 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
           </span>
         </Link>
         <div className='flex items-center gap-3'>
+          <Button className='gap-2' onClick={handleOpenAdd} disabled={addMutation.isPending}>
+            <Plus className='h-4 w-4' />
+            Добавить
+          </Button>
           <Link href={`/admin/survey/${surveyId}/results`} className='text-sm text-[#2563eb] hover:underline'>
             Смотреть результаты
           </Link>
@@ -168,6 +356,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                     <th className='px-4 py-3'>Участник</th>
                     <th className='px-4 py-3'>Контакты</th>
                     <th className='px-4 py-3'>Статус</th>
+                    <th className='px-4 py-3'>Срок действия</th>
                     <th className='px-4 py-3 text-right'>Карточка</th>
                   </tr>
                 </thead>
@@ -185,13 +374,38 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                           {participant.responseState ? responseLabels[participant.responseState] ?? participant.responseState : '—'}
                         </div>
                       </td>
-                      <td className='px-4 py-3 text-right'>
-                        <Link
-                          href={`/admin/survey/${surveyId}/participants/${participant.id}`}
-                          className='text-sm font-medium text-[#2563eb] hover:underline'
+                      <td className='px-4 py-3'>
+                        <div className='text-sm font-medium text-gray-900'>{formatDateTime(getParticipantTokenExpiry(participant))}</div>
+                        <div className='text-xs text-gray-500'>Срок действия приглашения</div>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='mt-2'
+                          onClick={() => handleOpenExtend(participant)}
+                          disabled={extendMutation.isPending}
                         >
-                          Открыть
-                        </Link>
+                          Продлить
+                        </Button>
+                      </td>
+                      <td className='px-4 py-3 text-right'>
+                        <div className='flex items-center justify-end gap-2'>
+                          <Button
+                            size='icon'
+                            variant='ghost'
+                            className='text-red-500 hover:text-red-600'
+                            onClick={() => handleRemoveParticipant(participant)}
+                            disabled={removeMutation.isPending}
+                            title='Удалить участника'
+                          >
+                            <Trash2 className='h-4 w-4' />
+                          </Button>
+                          <Link
+                            href={`/admin/survey/${surveyId}/participants/${participant.id}`}
+                            className='text-sm font-medium text-[#2563eb] hover:underline'
+                          >
+                            Открыть
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -202,6 +416,146 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
         </CardContent>
       </Card>
       </motion.div>
+      <Sheet
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open)
+          if (!open) {
+            setAddFullName('')
+            setAddEmail('')
+            setAddPhone('')
+          }
+        }}
+      >
+        <SheetContent side='right'>
+          <SheetHeader>
+            <SheetTitle>Добавление участника</SheetTitle>
+            <SheetDescription>Укажите контактную информацию, чтобы выслать приглашение на анкету.</SheetDescription>
+          </SheetHeader>
+          <div className='flex flex-col gap-4 px-4 pb-4'>
+            <div className='flex flex-col gap-2'>
+              <label className='text-sm font-medium text-gray-700' htmlFor='add-participant-name'>Имя и фамилия</label>
+              <Input
+                id='add-participant-name'
+                value={addFullName}
+                onChange={(event) => setAddFullName(event.target.value)}
+                placeholder='Например, Иван Иванов'
+                disabled={addMutation.isPending}
+              />
+            </div>
+            <div className='flex flex-col gap-2'>
+              <label className='text-sm font-medium text-gray-700' htmlFor='add-participant-email'>Email</label>
+              <Input
+                id='add-participant-email'
+                type='email'
+                value={addEmail}
+                onChange={(event) => setAddEmail(event.target.value)}
+                placeholder='user@example.com'
+                disabled={addMutation.isPending}
+              />
+            </div>
+            <div className='flex flex-col gap-2'>
+              <label className='text-sm font-medium text-gray-700' htmlFor='add-participant-phone'>Телефон (опционально)</label>
+              <Input
+                id='add-participant-phone'
+                value={addPhone}
+                onChange={(event) => setAddPhone(event.target.value)}
+                placeholder='+7 (900) 000-00-00'
+                disabled={addMutation.isPending}
+              />
+            </div>
+          </div>
+          <SheetFooter className='mt-auto flex-row justify-end gap-2 p-4'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setAddOpen(false)
+                setAddFullName('')
+                setAddEmail('')
+                setAddPhone('')
+              }}
+              disabled={addMutation.isPending}
+            >
+              Отмена
+            </Button>
+            <Button onClick={handleAddSubmit} disabled={addMutation.isPending}>
+              {addMutation.isPending ? 'Добавляем…' : 'Добавить участника'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+      <Sheet
+        open={Boolean(extendTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setExtendTarget(null)
+            setExtendValue('')
+          }
+        }}
+      >
+        <SheetContent side='right'>
+          <SheetHeader>
+            <SheetTitle>Продление токена</SheetTitle>
+            <SheetDescription>Установите новую дату истечения приглашения для выбранного участника.</SheetDescription>
+          </SheetHeader>
+          {extendTarget ? (
+            <div className='flex flex-col gap-4 px-4 pb-4'>
+              <div className='text-sm text-gray-600'>
+                Текущий срок: <span className='font-medium text-gray-900'>{formatDateTime(getParticipantTokenExpiry(extendTarget))}</span>
+              </div>
+              <div className='flex flex-col gap-2'>
+                <label className='text-sm font-medium text-gray-700' htmlFor='extend-token-input'>
+                  Новая дата истечения
+                </label>
+                <Input
+                  id='extend-token-input'
+                  type='datetime-local'
+                  value={extendValue}
+                  min={toLocalInputValue(new Date())}
+                  onChange={(event) => setExtendValue(event.target.value)}
+                  disabled={extendMutation.isPending}
+                />
+                <span className='text-xs text-gray-500'>Выберите дату и время в вашем часовом поясе.</span>
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  onClick={() => handleQuickExtend(DEFAULT_EXTENSION_DAYS)}
+                  disabled={extendMutation.isPending}
+                >
+                  +7 дней
+                </Button>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  onClick={() => handleQuickExtend(LONG_EXTENSION_DAYS)}
+                  disabled={extendMutation.isPending}
+                >
+                  +30 дней
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          <SheetFooter className='mt-auto flex-row justify-end gap-2 p-4'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setExtendTarget(null)
+                setExtendValue('')
+              }}
+              disabled={extendMutation.isPending}
+            >
+              Отмена
+            </Button>
+            <Button onClick={handleExtendSubmit} disabled={!extendTarget || !extendValue || extendMutation.isPending}>
+              {extendMutation.isPending ? 'Сохраняем…' : 'Продлить'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

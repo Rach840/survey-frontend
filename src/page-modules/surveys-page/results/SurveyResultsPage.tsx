@@ -4,13 +4,14 @@ import Link from 'next/link'
 import {useMemo} from 'react'
 import {motion} from 'motion/react'
 import {ArrowLeft, FileSpreadsheet} from 'lucide-react'
-import type {SurveyInvitationSummary} from '@/entities/surveys/types'
+
+import {useSurveyResults} from '@/entities/surveys/model/surveyResultsQuery'
+import type {SurveyResultsItem, SurveyResultsStatistics} from '@/entities/surveys/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Button} from '@/shared/ui/button'
 import {Skeleton} from '@/shared/ui/skeleton'
 import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
-import {useSurveyResults} from "@/entities/surveys/model/surveyResultsQuery";
-import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
+import ErrorFetch from '@/widgets/FetchError/ErrorFetch'
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'medium',
@@ -39,10 +40,32 @@ function normalizePercentage(value?: number | null) {
   return Math.max(0, Math.min(100, Math.round(scaled)))
 }
 
-function truncateToken(token?: string | null) {
-  if (!token) return '—'
-  if (token.length <= 16) return token
-  return `${token.slice(0, 10)}…${token.slice(-4)}`
+function formatAverageDuration(stats: SurveyResultsStatistics): string | null {
+  if (stats.average_completion_duration && stats.average_completion_duration.trim()) {
+    return stats.average_completion_duration
+  }
+
+  const seconds = stats.average_completion_seconds
+  if (seconds === undefined || seconds === null || Number.isNaN(seconds)) {
+    return null
+  }
+
+  if (seconds < 60) {
+    return `${seconds.toFixed(seconds < 10 ? 2 : 1)} с`
+  }
+
+  const minutes = seconds / 60
+  if (minutes < 60) {
+    return `${minutes.toFixed(minutes < 10 ? 1 : 0)} мин`
+  }
+
+  const hours = minutes / 60
+  if (hours < 24) {
+    return `${hours.toFixed(hours < 10 ? 1 : 0)} ч`
+  }
+
+  const days = hours / 24
+  return `${days.toFixed(days < 10 ? 1 : 0)} д`
 }
 
 type MetricCard = {
@@ -51,31 +74,34 @@ type MetricCard = {
   percentage?: number
 }
 
+function mapMetrics(stats: SurveyResultsStatistics | undefined): MetricCard[] {
+  if (!stats) return []
+  const completion = normalizePercentage(stats.completion_rate)
+  const overall = normalizePercentage(stats.overall_progress)
+  return [
+    { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
+    { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
+    { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
+    { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
+    { label: 'Конверсия', value: `${completion}%`, percentage: completion },
+    { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
+  ]
+}
+
+function getSubmittedResults(results: SurveyResultsItem[] | undefined) {
+  if (!results) return []
+  return results.filter((item) => item.response?.state === 'submitted')
+}
+
 export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
   const {data, isLoading, isError, refetch} = useSurveyResults(surveyId)
-  console.log('Педик',data)
   const survey = data?.survey
   const stats = data?.statistics
-  const invitations = useMemo<SurveyInvitationSummary[]>(
-    () => data?.invitations ?? [],
-    [data?.invitations],
-  )
-
-  const metrics = useMemo<MetricCard[]>(() => {
-    if (!stats) return []
-    const completion = normalizePercentage(stats.completion_rate)
-    const overall = normalizePercentage(stats.overall_progress)
-    return [
-      { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
-      { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
-      { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
-      { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
-      { label: 'Конверсия', value: `${completion}%`, percentage: completion },
-      { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
-    ]
-  }, [stats])
+  const submittedResults = useMemo(() => getSubmittedResults(data?.results), [data?.results])
+  const metrics = useMemo(() => mapMetrics(stats), [stats])
 
   const exportHref = `/api/survey/${surveyId}/export?format=excel`
+  const averageDuration = stats ? formatAverageDuration(stats) : null
 
   if (isLoading) {
     return (
@@ -162,6 +188,11 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
                 </div>
               ))}
             </div>
+            {averageDuration ? (
+              <div className='rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700'>
+                Среднее время заполнения: <span className='font-medium'>{averageDuration}</span>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </motion.div>
@@ -174,12 +205,14 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
       >
         <Card className='border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
           <CardHeader className='border-b pb-6'>
-            <CardTitle className='text-lg font-semibold text-gray-900'>Приглашённые участники</CardTitle>
-            <CardDescription className='text-gray-600'>Отслеживайте, кому отправлены приглашения и когда они истекают.</CardDescription>
+            <CardTitle className='text-lg font-semibold text-gray-900'>Результаты участников</CardTitle>
+            <CardDescription className='text-gray-600'>
+              Список участников, которые завершили прохождение анкеты. Откройте ответы, чтобы посмотреть детали.
+            </CardDescription>
           </CardHeader>
           <CardContent className='p-0'>
-            {invitations.length === 0 ? (
-              <div className='p-6 text-sm text-gray-500'>Пока нет приглашений для отображения.</div>
+            {submittedResults.length === 0 ? (
+              <div className='p-6 text-sm text-gray-500'>Здесь появятся участники, завершившие анкету.</div>
             ) : (
               <div className='overflow-x-auto'>
                 <table className='min-w-full divide-y divide-gray-200 text-left'>
@@ -187,21 +220,25 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
                     <tr>
                       <th className='px-4 py-3'>Участник</th>
                       <th className='px-4 py-3'>Email</th>
-                      <th className='px-4 py-3'>Срок действия</th>
-                      <th className='px-4 py-3'>Токен</th>
+                      <th className='px-4 py-3'>Канал</th>
+                      <th className='px-4 py-3'>Отправлено</th>
+                      <th className='px-4 py-3 text-right'>Ответы</th>
                     </tr>
                   </thead>
                   <tbody className='divide-y divide-gray-100'>
-                    {invitations.map((invitation) => (
-                      <tr key={invitation.enrollment_id} className='text-sm text-gray-700'>
+                    {submittedResults.map((item) => (
+                      <tr key={item.enrollment.id} className='text-sm text-gray-700'>
                         <td className='px-4 py-3'>
-                          <div className='font-medium text-gray-900'>{invitation.full_name || '—'}</div>
-                          <div className='text-xs text-gray-500'>ID: {invitation.enrollment_id}</div>
+                          <div className='font-medium text-gray-900'>{item.enrollment.full_name || '—'}</div>
+                          <div className='text-xs text-gray-500'>ID: {item.enrollment.id}</div>
                         </td>
-                        <td className='px-4 py-3'>{invitation.email || '—'}</td>
-                        <td className='px-4 py-3'>{formatDateTime(invitation.expires_at)}</td>
-                        <td className='px-4 py-3 font-mono text-xs text-gray-600' title={invitation.token}>
-                          {truncateToken(invitation.token)}
+                        <td className='px-4 py-3'>{item.enrollment.email || '—'}</td>
+                        <td className='px-4 py-3 capitalize'>{item.response.channel ?? '—'}</td>
+                        <td className='px-4 py-3'>{formatDateTime(item.response.submitted_at)}</td>
+                        <td className='px-4 py-3 text-right'>
+                          <Button asChild size='sm' variant='outline'>
+                            <Link href={`/admin/survey/${surveyId}/results/${item.enrollment.id}`}>Просмотреть</Link>
+                          </Button>
                         </td>
                       </tr>
                     ))}

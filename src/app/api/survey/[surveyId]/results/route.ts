@@ -21,9 +21,8 @@ export async function GET(
     try {
         const { surveyId } = await context.params
         const access = await ensureAccess()
-        const url = new URL(req.url)
-        console.log(url)
-        const upstream = await fetch(`${getApiBaseUrl()}/api/survey/${surveyId}${url.search}`, {
+
+        const upstream = await fetch(`${getApiBaseUrl()}/api/survey/${surveyId}/results`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${access}`,
