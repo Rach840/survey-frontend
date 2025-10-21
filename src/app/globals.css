@@ -3,6 +3,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@font-face {
+  font-family: 'Liberation Sans';
+  src: url('/fonts/LiberationSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Liberation Sans';
+  src: url('/fonts/LiberationSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -88,7 +104,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Liberation Sans', Arial, Helvetica, sans-serif;
 }
 
 .dark {
@@ -124,6 +140,130 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+[data-pdf-export='true'] {
+  background-color: #f8fafc !important;
+  background-image: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #e2e8f0 100%) !important;
+  --background: #ffffff !important;
+  --foreground: #111827 !important;
+  --card: #ffffff !important;
+  --card-foreground: #111827 !important;
+  --popover: #ffffff !important;
+  --popover-foreground: #111827 !important;
+  --primary: #6366f1 !important;
+  --primary-foreground: #ffffff !important;
+  --secondary: #f3f4f6 !important;
+  --secondary-foreground: #374151 !important;
+  --muted: #f5f5f5 !important;
+  --muted-foreground: #6b7280 !important;
+  --accent: #f3f4ff !important;
+  --accent-foreground: #4c1d95 !important;
+  --destructive: #ef4444 !important;
+  --border: #e5e7eb !important;
+  --input: #e5e7eb !important;
+  --ring: #6366f1 !important;
+  --chart-1: #ef4444 !important;
+  --chart-2: #3b82f6 !important;
+  --chart-3: #6366f1 !important;
+  --chart-4: #22c55e !important;
+  --chart-5: #f97316 !important;
+  --sidebar: #ffffff !important;
+  --sidebar-foreground: #111827 !important;
+  --sidebar-primary: #111827 !important;
+  --sidebar-primary-foreground: #ffffff !important;
+  --sidebar-accent: #f3f4f6 !important;
+  --sidebar-accent-foreground: #374151 !important;
+  --sidebar-border: #e5e7eb !important;
+  --sidebar-ring: #6366f1 !important;
+  --color-gray-900: #111827 !important;
+  --color-gray-700: #374151 !important;
+  --color-gray-600: #4b5563 !important;
+  --color-gray-500: #6b7280 !important;
+  --color-slate-50: #f8fafc !important;
+  --color-slate-100: #f1f5f9 !important;
+  --color-slate-200: #e2e8f0 !important;
+  --color-white: #ffffff !important;
+  --font-geist-sans: 'Liberation Sans', Arial, Helvetica, sans-serif !important;
+  --font-sans: 'Liberation Sans', Arial, Helvetica, sans-serif !important;
+  color: #111827 !important;
+  font-family: 'Liberation Sans', Arial, Helvetica, sans-serif !important;
+}
+
+[data-pdf-export='true'] .bg-white\/90,
+[data-pdf-export='true'] .bg-white\/85,
+[data-pdf-export='true'] .bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  background-image: none !important;
+}
+
+[data-pdf-export='true'] .bg-slate-50,
+[data-pdf-export='true'] .bg-slate-100,
+[data-pdf-export='true'] .bg-slate-200 {
+  background-image: none !important;
+  background-color: #f3f4f6 !important;
+}
+
+[data-pdf-export='true'] .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+[data-pdf-export='true'] .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+[data-pdf-export='true'] .bg-slate-200 {
+  background-color: #e2e8f0 !important;
+}
+
+[data-pdf-export='true'] .bg-gradient-to-br {
+  background-image: none !important;
+  background-color: #ffffff !important;
+}
+
+[data-pdf-export='true'] .from-slate-50 {
+  --tw-gradient-from: #f8fafc !important;
+  --tw-gradient-stops: #f8fafc, var(--tw-gradient-to, rgba(248, 250, 252, 0)) !important;
+}
+
+[data-pdf-export='true'] .via-white {
+  --tw-gradient-stops: var(--tw-gradient-from), #ffffff, var(--tw-gradient-to, rgba(255, 255, 255, 0)) !important;
+}
+
+[data-pdf-export='true'] .to-slate-100 {
+  --tw-gradient-to: #f1f5f9 !important;
+}
+
+[data-pdf-export='true'] .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+[data-pdf-export='true'] .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+[data-pdf-export='true'] .text-gray-700 {
+  color: #374151 !important;
+}
+
+[data-pdf-export='true'] .text-gray-900 {
+  color: #111827 !important;
+}
+
+[data-pdf-export='true'] .ring-slate-200\/60 {
+  --tw-ring-color: rgba(226, 232, 240, 0.6) !important;
+  --tw-ring-offset-color: #ffffff !important;
+}
+
+[data-pdf-export='true'] .border-slate-200 {
+  border-color: #e5e7eb !important;
+}
+
+[data-pdf-export='true'] *,
+[data-pdf-export='true'] *::before,
+[data-pdf-export='true'] *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 @layer base {

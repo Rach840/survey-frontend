@@ -7,7 +7,7 @@ import {ArrowLeft, Edit3, RefreshCcw} from 'lucide-react'
 
 import {useSurveyStatistics} from '@/entities/surveys/model/surveyStatisticsQuery'
 import {useSurveyUpdate} from '@/features/survey/update-survey'
-import type {SurveyResult, SurveyStatus} from '@/entities/surveys/types'
+import type {SurveyMode, SurveyResult, SurveyStatus} from '@/entities/surveys/types'
 import {Button} from '@/shared/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {
@@ -20,7 +20,6 @@ import {
   SheetTrigger,
 } from '@/shared/ui/sheet'
 import {Input} from '@/shared/ui/input'
-import {Textarea} from '@/shared/ui/textarea'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/shared/ui/select'
 import {Skeleton} from '@/shared/ui/skeleton'
 import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
@@ -59,9 +58,10 @@ type MetricCard = {
 
 type EditFormState = {
   title: string
-  description: string
+  mode: SurveyMode
   status: SurveyStatus
   maxParticipants: string
+  publicSlug: string
   startsAt: string
   endsAt: string
 }
@@ -275,12 +275,14 @@ export default function SurveyDetailPage({
     const maxParticipantsValue = readSurveyProp<number | string>(survey, 'max_participants', 'maxParticipants')
     const startsAtValue = readSurveyProp<string>(survey, 'starts_at', 'startsAt')
     const endsAtValue = readSurveyProp<string>(survey, 'ends_at', 'endsAt')
+    const publicSlugValue = readSurveyProp<string>(survey, 'public_slug', 'publicSlug')
 
     setForm({
       title: survey.title,
-      description: survey.description ?? '',
+      mode: (survey.mode as SurveyMode) ?? 'admin',
       status: (survey.status as SurveyStatus) ?? 'draft',
       maxParticipants: maxParticipantsValue !== undefined && maxParticipantsValue !== null ? String(maxParticipantsValue) : '',
+      publicSlug: publicSlugValue ?? '',
       startsAt: toInputDateTime(startsAtValue ?? null),
       endsAt: toInputDateTime(endsAtValue ?? null),
     })
@@ -298,18 +300,31 @@ export default function SurveyDetailPage({
   const handleSave = async () => {
     if (!form) return
 
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() ? form.description.trim() : null,
-      status: form.status,
-      maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : null,
-      startsAt: parseDateTime(form.startsAt),
-      endsAt: parseDateTime(form.endsAt),
+    const title = form.title.trim()
+    if (!title) {
+      toast.error('Укажите название анкеты')
+      return
     }
 
-    if (payload.maxParticipants !== null && Number.isNaN(payload.maxParticipants)) {
+    const mode = form.mode
+    const maxParticipantsValue = form.maxParticipants.trim() ? Number(form.maxParticipants) : null
+    if (maxParticipantsValue !== null && (Number.isNaN(maxParticipantsValue) || maxParticipantsValue < 0)) {
       toast.error('Введите корректное число участников')
       return
+    }
+
+    const startsAtIso = parseDateTime(form.startsAt)
+    const endsAtIso = parseDateTime(form.endsAt)
+    const slug = form.publicSlug.trim()
+
+    const payload = {
+      title,
+      invitationMode: mode,
+      status: form.status,
+      maxParticipants: maxParticipantsValue,
+      publicSlug: slug || null,
+      startsAt: startsAtIso,
+      endsAt: endsAtIso,
     }
 
     try {
@@ -423,16 +438,16 @@ export default function SurveyDetailPage({
                   </div>
 
                   <div className='space-y-2'>
-                    <label className='text-sm font-medium text-gray-700' htmlFor='survey-description'>
-                      Описание
-                    </label>
-                    <Textarea
-                      id='survey-description'
-                      value={form.description}
-                      onChange={(event) => handleChange('description', event.target.value)}
-                      placeholder='Краткое описание анкеты'
-                      rows={4}
-                    />
+                    <label className='text-sm font-medium text-gray-700'>Режим приглашений</label>
+                    <Select value={form.mode} onValueChange={(value: SurveyMode) => handleChange('mode', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Выберите режим' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='admin'>Администратор</SelectItem>
+                        <SelectItem value='bot'>Бот</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className='space-y-2'>
@@ -449,6 +464,18 @@ export default function SurveyDetailPage({
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label className='text-sm font-medium text-gray-700' htmlFor='survey-slug'>
+                      Публичный идентификатор
+                    </label>
+                    <Input
+                      id='survey-slug'
+                      value={form.publicSlug}
+                      onChange={(event) => handleChange('publicSlug', event.target.value)}
+                      placeholder='Например, team-onboarding'
+                    />
                   </div>
 
                   <div className='space-y-2'>
@@ -713,7 +740,7 @@ export default function SurveyDetailPage({
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+    <div className='min-h-screen   px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
       <motion.div
         className='mb-6 flex items-center justify-between'
         initial={fadeInitial}

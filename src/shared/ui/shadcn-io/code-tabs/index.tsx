@@ -1,19 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { useTheme } from 'next-themes';
+import {useTheme} from 'next-themes';
 
-import { cn } from '@/shared/lib/utils';
+import {cn} from '@/shared/lib/utils';
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
   TabsContents,
-  useTabs,
+  TabsList,
   type TabsProps,
-} from '@/components/ui/shadcn-io/tabs';
-import { CopyButton } from '@/components/ui/shadcn-io/copy-button';
+  TabsTrigger,
+  useTabs,
+} from '@/shared/ui/shadcn-io/tabs';
+import {CopyButton} from '@/shared/ui/shadcn-io/copy-button';
 
 type CodeTabsProps = {
   codes: Record<string, string>;

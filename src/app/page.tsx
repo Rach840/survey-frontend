@@ -1,5 +1,5 @@
 'use client'
-import {Spinner} from "@/components/ui/spinner";
+import {Spinner} from "@/shared/ui/spinner";
 import {useMeQuery} from "@/entities/user/model/meQuery";
 import {useRouter} from "next/navigation";
 

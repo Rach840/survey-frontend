@@ -119,7 +119,7 @@ export default function CreateSurveyPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-20 pt-10 sm:px-8 lg:px-12">
+        <div className="min-h-screen  px-4 pb-20 pt-10 sm:px-8 lg:px-12">
             <motion.div
                 className="mx-auto flex max-w-5xl flex-col gap-8"
                 initial="hidden"

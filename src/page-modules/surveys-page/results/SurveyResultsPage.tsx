@@ -1,17 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import {useMemo} from 'react'
+import {useCallback, useMemo, useState} from 'react'
 import {motion} from 'motion/react'
-import {ArrowLeft, FileSpreadsheet} from 'lucide-react'
+import {ArrowLeft, FileSpreadsheet, Loader2} from 'lucide-react'
 
 import {useSurveyResults} from '@/entities/surveys/model/surveyResultsQuery'
-import type {SurveyResultsItem, SurveyResultsStatistics} from '@/entities/surveys/types'
+import type {SurveyResultsAnswer, SurveyResultsItem, SurveyResultsStatistics,} from '@/entities/surveys/types'
+import type {TemplateField, TemplateSection} from '@/entities/templates/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Button} from '@/shared/ui/button'
 import {Skeleton} from '@/shared/ui/skeleton'
 import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
 import ErrorFetch from '@/widgets/FetchError/ErrorFetch'
+import {toast} from 'sonner'
+import {loadXlsx} from '@/shared/lib/loadXlsx'
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'medium',
@@ -40,6 +43,137 @@ function normalizePercentage(value?: number | null) {
   return Math.max(0, Math.min(100, Math.round(scaled)))
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function coerceTemplateSections(snapshot: unknown): TemplateSection[] {
+  if (!snapshot) return []
+
+  const fromArray = (sections: unknown[]): TemplateSection[] =>
+    sections
+      .map((section, sectionIndex) => {
+        if (!isPlainRecord(section)) return null
+
+        const fieldsSource = Array.isArray(section.fields) ? section.fields : []
+        const fields = fieldsSource
+          .map((field, fieldIndex) => {
+            if (!isPlainRecord(field)) return null
+            const options = Array.isArray(field.options)
+              ? field.options
+                  .filter(isPlainRecord)
+                  .map((option) => ({
+                    code: typeof option.code === 'string' ? option.code : String(option.code ?? ''),
+                    label: typeof option.label === 'string' ? option.label : String(option.label ?? option.code ?? ''),
+                  }))
+              : undefined
+
+            const code = typeof field.code === 'string' ? field.code : ''
+            const label = typeof field.label === 'string' ? field.label : code
+
+            return {
+              id: typeof field.id === 'string' ? field.id : `${sectionIndex}-${fieldIndex}`,
+              code,
+              type: typeof field.type === 'string' ? (field.type as TemplateField['type']) : 'text',
+              label,
+              required: field.required === true,
+              options,
+            }
+          })
+          .filter(Boolean) as TemplateField[]
+
+        const code = typeof section.code === 'string' ? section.code : ''
+        const title =
+          typeof section.title === 'string'
+            ? section.title
+            : code
+              ? code
+              : `Секция ${sectionIndex + 1}`
+
+        return {
+          id: typeof section.id === 'string' ? section.id : `${sectionIndex}`,
+          code,
+          title,
+          repeatable: section.repeatable === true,
+          min: typeof section.min === 'number' ? section.min : undefined,
+          max: typeof section.max === 'number' ? section.max : undefined,
+          fields,
+        }
+      })
+      .filter(Boolean) as TemplateSection[]
+
+  if (Array.isArray(snapshot)) {
+    return fromArray(snapshot)
+  }
+
+  if (typeof snapshot === 'string') {
+    try {
+      const parsed = JSON.parse(snapshot)
+      return Array.isArray(parsed) ? fromArray(parsed) : []
+    } catch {
+      return []
+    }
+  }
+
+  if (isPlainRecord(snapshot)) {
+    if (Array.isArray(snapshot.published_schema_json)) {
+      return fromArray(snapshot.published_schema_json)
+    }
+    if (Array.isArray(snapshot.draft_schema_json)) {
+      return fromArray(snapshot.draft_schema_json)
+    }
+  }
+
+  return []
+}
+
+type FieldMeta = {
+  sectionTitle: string
+  fieldLabel: string
+}
+
+type FieldLookup = {
+  resolve: (sectionCode: string | null | undefined, questionCode: string) => FieldMeta
+}
+
+function createFieldLookup(sections: TemplateSection[]): FieldLookup {
+  const exactMap = new Map<string, FieldMeta>()
+  const fallbackMap = new Map<string, FieldMeta>()
+
+  sections.forEach((section) => {
+    const sectionCode = section.code || ''
+    const sectionTitle = section.title || sectionCode || 'Без секции'
+
+    section.fields.forEach((field) => {
+      const meta: FieldMeta = {
+        sectionTitle,
+        fieldLabel: field.label || field.code,
+      }
+
+      exactMap.set(`${sectionCode}::${field.code}`, meta)
+      if (!fallbackMap.has(field.code)) {
+        fallbackMap.set(field.code, meta)
+      }
+    })
+  })
+
+  return {
+    resolve(sectionCode, questionCode) {
+      const normalizedSection = sectionCode ?? ''
+      const direct = exactMap.get(`${normalizedSection}::${questionCode}`)
+      if (direct) return direct
+
+      const fallback = fallbackMap.get(questionCode)
+      if (fallback) return fallback
+
+      return {
+        sectionTitle: normalizedSection || 'Без секции',
+        fieldLabel: questionCode,
+      }
+    },
+  }
+}
+
 function formatAverageDuration(stats: SurveyResultsStatistics): string | null {
   if (stats.average_completion_duration && stats.average_completion_duration.trim()) {
     return stats.average_completion_duration
@@ -66,6 +200,51 @@ function formatAverageDuration(stats: SurveyResultsStatistics): string | null {
 
   const days = hours / 24
   return `${days.toFixed(days < 10 ? 1 : 0)} д`
+}
+
+function formatAnswerValue(answer: SurveyResultsAnswer): string {
+  if (typeof answer.value_text === 'string' && answer.value_text.trim().length > 0) {
+    return answer.value_text.trim()
+  }
+
+  if (answer.value_number !== undefined && answer.value_number !== null && !Number.isNaN(answer.value_number)) {
+    return String(answer.value_number)
+  }
+
+  if (answer.value_bool !== undefined && answer.value_bool !== null) {
+    return answer.value_bool ? 'Да' : 'Нет'
+  }
+
+  if (typeof answer.value_datetime === 'string' && answer.value_datetime.trim().length) {
+    return formatDateTime(answer.value_datetime)
+  }
+
+  if (typeof answer.value_date === 'string' && answer.value_date.trim().length) {
+    return answer.value_date
+  }
+
+  if (answer.value_json !== undefined && answer.value_json !== null) {
+    if (Array.isArray(answer.value_json)) {
+      if (answer.value_json.length === 0) {
+        return '—'
+      }
+      return answer.value_json
+        .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+        .join(', ')
+    }
+
+    if (typeof answer.value_json === 'object') {
+      try {
+        return JSON.stringify(answer.value_json)
+      } catch {
+        return String(answer.value_json)
+      }
+    }
+
+    return String(answer.value_json)
+  }
+
+  return '—'
 }
 
 type MetricCard = {
@@ -97,15 +276,77 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
   const {data, isLoading, isError, refetch} = useSurveyResults(surveyId)
   const survey = data?.survey
   const stats = data?.statistics
-  const submittedResults = useMemo(() => getSubmittedResults(data?.results), [data?.results])
+  const [isExporting, setIsExporting] = useState(false)
+  const allResults = useMemo(() => data?.results ?? [], [data?.results])
+  const submittedResults = useMemo(() => getSubmittedResults(allResults), [allResults])
   const metrics = useMemo(() => mapMetrics(stats), [stats])
+  const formSections = useMemo(() => coerceTemplateSections(survey?.form_snapshot_json), [survey?.form_snapshot_json])
+  const fieldLookup = useMemo(() => createFieldLookup(formSections), [formSections])
+  const handleExport = useCallback(async () => {
+    const exportResults = getSubmittedResults(allResults)
 
-  const exportHref = `/api/survey/${surveyId}/export?format=excel`
+    if (!exportResults.length) {
+      toast.info('Нет завершённых ответов для экспорта')
+      return
+    }
+
+    setIsExporting(true)
+
+    try {
+      const XLSX = await loadXlsx()
+
+      const responsesSheet = XLSX.utils.json_to_sheet(
+        exportResults.map((item, index) => ({
+          '#': index + 1,
+          'ID участника': item.enrollment.id,
+          ФИО: item.enrollment.full_name ?? '',
+          Email: item.enrollment.email ?? '',
+          Канал: item.response.channel ?? '',
+          'Статус ответа': item.response.state,
+          'Начато заполнение': formatDateTime(item.response.started_at),
+          'Отправлено': formatDateTime(item.response.submitted_at),
+        })),
+      )
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, responsesSheet, 'Responses')
+
+      const answersRows = exportResults.flatMap((item) =>
+        item.answers.map((answer) => {
+          const meta = fieldLookup.resolve(answer.section_code, answer.question_code)
+
+          return {
+            'ID участника': item.enrollment.id,
+            ФИО: item.enrollment.full_name ?? '',
+            Email: item.enrollment.email ?? '',
+            Секция: meta.sectionTitle,
+            Вопрос: meta.fieldLabel,
+            'Код вопроса': answer.question_code,
+            Повтор: answer.repeat_path ?? '',
+            Ответ: formatAnswerValue(answer),
+          }
+        }),
+      )
+
+      if (answersRows.length) {
+        const answersSheet = XLSX.utils.json_to_sheet(answersRows)
+        XLSX.utils.book_append_sheet(workbook, answersSheet, 'Answers')
+      }
+
+      XLSX.writeFile(workbook, `survey-${surveyId}-results.xlsx`)
+      toast.success('Файл сформирован')
+    } catch (error) {
+      console.error('survey results export error', error)
+      toast.error('Не удалось сформировать файл')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [allResults, fieldLookup, surveyId])
   const averageDuration = stats ? formatAverageDuration(stats) : null
 
   if (isLoading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <div className='min-h-screen  px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
         <motion.div
           className='space-y-6'
           initial='hidden'
@@ -133,7 +374,7 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
   }
 
   return (
-    <div className='min-h-screen space-y-8 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+    <div className='min-h-screen space-y-8  px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
       <motion.div
         className='flex items-center justify-between'
         initial='hidden'
@@ -147,11 +388,13 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
             Назад к анкетам
           </span>
         </Link>
-        <Button asChild className='gap-2'>
-          <a href={exportHref} download>
+        <Button className='gap-2' onClick={handleExport} disabled={isExporting}>
+          {isExporting ? (
+            <Loader2 className='h-4 w-4 animate-spin' />
+          ) : (
             <FileSpreadsheet className='h-4 w-4' />
-            Экспортировать в Excel
-          </a>
+          )}
+          {isExporting ? 'Формирование...' : 'Экспортировать в Excel'}
         </Button>
       </motion.div>
 

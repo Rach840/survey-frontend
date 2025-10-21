@@ -62,16 +62,47 @@ export async function PATCH(
   context: { params: Promise<{ surveyId: string }> },
 ) {
   try {
-    const payload = await req.json()
+    const rawPayload = await req.json().catch(() => ({}))
     const access = await ensureAccess()
     const { surveyId } = await context.params
+
+    const upstreamPayload: Record<string, unknown> = {}
+
+    if (rawPayload.title !== undefined) {
+      upstreamPayload.title = rawPayload.title
+    }
+
+    if (rawPayload.invitationMode !== undefined) {
+      upstreamPayload.invitationMode = rawPayload.invitationMode
+    }
+
+    if (rawPayload.status !== undefined) {
+      upstreamPayload.status = rawPayload.status
+    }
+
+    if (rawPayload.maxParticipants !== undefined) {
+      upstreamPayload.max_participants = { value: rawPayload.maxParticipants ?? null }
+    }
+
+    if (rawPayload.publicSlug !== undefined) {
+      upstreamPayload.public_slug = { value: rawPayload.publicSlug ?? null }
+    }
+
+    if (rawPayload.startsAt !== undefined) {
+      upstreamPayload.starts_at = { value: rawPayload.startsAt ?? null }
+    }
+
+    if (rawPayload.endsAt !== undefined) {
+      upstreamPayload.ends_at = { value: rawPayload.endsAt ?? null }
+    }
+
     const upstream = await forwardRequest(req, surveyId, {
       method: 'PATCH',
       headers: {
         'content-type': 'application/json',
         Authorization: `Bearer ${access}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(upstreamPayload),
     })
 
     const data = await upstream.json().catch(() => ({ ok: true }))

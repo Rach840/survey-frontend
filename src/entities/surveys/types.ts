@@ -20,8 +20,8 @@ export interface SurveyStats {
 }
 
 export interface SurveyParticipant {
-  id: number
-  fullName: string
+  enrollment_id: number
+  full_name: string
   email?: string
   source: 'admin' | 'bot'
   state: EnrollmentState
@@ -30,7 +30,7 @@ export interface SurveyParticipant {
   lastActivity?: string | null
   submittedAt?: string | null
   expires_at?: string | null
-  token_expires_at?: string | null
+  token: string
 }
 
 export interface SurveyDetail {
@@ -141,11 +141,12 @@ export interface SurveyResultsPayload {
   statistics: SurveyResultsStatistics
 }
 
-export type UpdateSurveyPayload = Partial<{
-  title: string
-  description: string | null
-  status: SurveyStatus
-  maxParticipants: number | null
-  startsAt: string | null
-  endsAt: string | null
-}>
+export type UpdateSurveyPayload = {
+  title?: string
+  invitationMode?: SurveyMode
+  status?: SurveyStatus
+  maxParticipants?: number | null
+  publicSlug?: string | null
+  startsAt?: string | null
+  endsAt?: string | null
+}

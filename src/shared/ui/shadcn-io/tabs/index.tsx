@@ -1,13 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { motion, type Transition, type HTMLMotionProps } from 'motion/react';
+import {type HTMLMotionProps, motion, type Transition} from 'motion/react';
 
-import { cn } from '@/shared/lib/utils';
-import {
-  MotionHighlight,
-  MotionHighlightItem,
-} from '@/components/ui/shadcn-io/motion-highlight';
+import {cn} from '@/shared/lib/utils';
+import {MotionHighlight, MotionHighlightItem,} from '@/shared/ui/shadcn-io/motion-highlight';
 
 // Tabs Component
 type TabsContextType<T extends string> = {

@@ -14,7 +14,7 @@ export function useSurveyUpdate(surveyId: string) {
   return useMutation({
     mutationFn: (payload: UpdateSurveyPayload) => updateSurvey(surveyId, payload),
     onSuccess: (data) => {
-      invalidateApiFetchCache('/api/survey')
+      invalidateApiFetchCache('api/survey')
       queryClient.setQueryData(surveyDetailKey(surveyId), data)
       queryClient.invalidateQueries({ queryKey: surveyStatisticsKey(surveyId) })
     },

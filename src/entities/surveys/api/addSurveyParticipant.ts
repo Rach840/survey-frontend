@@ -8,8 +8,7 @@ export interface AddSurveyParticipantPayload {
 }
 
 export async function addSurveyParticipant({ surveyId, ...payload }: AddSurveyParticipantPayload) {
-  const query = new URLSearchParams({ survey: surveyId })
-  const response = await apiFetch(`/api/survey/enrollment?${query.toString()}`, {
+  const response = await apiFetch(`/api/survey/${surveyId}/participants`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',

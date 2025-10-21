@@ -95,7 +95,7 @@ export  default  function SurveyParticipantPage({
 
   if (isLoading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <div className='min-h-screen  px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
         <motion.div
           className='space-y-4'
           initial='hidden'
@@ -117,7 +117,7 @@ export  default  function SurveyParticipantPage({
 
   if (!participant) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <div className='min-h-screen  px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
         <motion.div
           initial='hidden'
           animate='show'
@@ -144,7 +144,7 @@ export  default  function SurveyParticipantPage({
   const exportHref = `/api/survey/${surveyId}/participants/${participantId}/export?format=pdf`
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+    <div className='min-h-screen  px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
       <motion.div
         className='flex flex-wrap items-center justify-between gap-4'
         initial='hidden'

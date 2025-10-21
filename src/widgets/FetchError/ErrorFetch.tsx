@@ -1,7 +1,7 @@
 import {QueryObserverResult, RefetchOptions} from "@tanstack/query-core";
 import {motion} from "motion/react";
 import {fadeTransition, fadeUpVariants} from "@/shared/ui/page-transition";
-import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
+import {Alert, AlertDescription, AlertTitle} from "@/shared/ui/alert";
 import {AlertCircleIcon, ArrowLeft, RefreshCcw} from "lucide-react";
 import {Button} from "@/shared";
 import {useRouter} from "next/navigation";

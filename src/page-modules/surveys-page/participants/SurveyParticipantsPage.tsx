@@ -5,7 +5,6 @@ import {useMemo, useState} from 'react'
 import Link from 'next/link'
 import {motion} from 'motion/react'
 import {ArrowLeft, FileSpreadsheet, Filter, Plus, Trash2} from 'lucide-react'
-
 import {useSurveyDetail} from '@/entities/surveys/model/surveyDetailQuery'
 import type {SurveyParticipant} from '@/entities/surveys/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
@@ -21,6 +20,8 @@ import ErrorFetch from '@/widgets/FetchError/ErrorFetch'
 import {extendEnrollmentToken} from '@/entities/surveys/api/extendEnrollmentToken'
 import {addSurveyParticipant} from '@/entities/surveys/api/addSurveyParticipant'
 import {removeSurveyParticipant} from '@/entities/surveys/api/removeSurveyParticipant'
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/shared/ui/table"
+import {CopyButton} from "@/shared/ui/shadcn-io/copy-button";
 
 const enrollmentLabels: Record<string, string> = {
   invited: 'Приглашён',
@@ -119,8 +120,8 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
   })
 
   const removeMutation = useMutation({
-    mutationFn: async (enrollmentId: number) =>
-      removeSurveyParticipant({ surveyId, enrollmentId: String(enrollmentId) }),
+    mutationFn: async (participantId: number) =>
+      removeSurveyParticipant({ surveyId, enrollmentId: String(participantId) }),
     onSuccess: () => {
       toast.success('Участник удалён')
       refetch()
@@ -189,21 +190,20 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
     const fullName = addFullName.trim()
     const email = addEmail.trim()
     const phone = addPhone.trim()
-
     if (!fullName) {
       toast.error('Введите имя участника')
       return
     }
 
-    if (!email) {
-      toast.error('Укажите email участника')
+    if (!email && !phone) {
+      toast.error('Укажите email или телефон участника')
       return
     }
 
     try {
       await addMutation.mutateAsync({
         full_name: fullName,
-        email,
+        email: email ? email : undefined,
         phone: phone ? phone : undefined,
       })
     } catch (error) {
@@ -211,15 +211,15 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
     }
   }
 
-  const handleRemoveParticipant = (participant: SurveyParticipant) => {
-    if (!participant.id) return
-    const displayName = participant.fullName || participant.email || String(participant.id)
-    const confirmed = window.confirm(`Удалить участника "${displayName}"?`)
-    if (!confirmed) {
-      return
-    }
+  const handleRemoveParticipant = async (participant: SurveyParticipant) => {
+    if (!participant.enrollment_id) return
 
-    removeMutation.mutate(participant.id)
+    try {
+      await removeMutation.mutateAsync(participant.enrollment_id)
+      await refetch()
+    } catch (error) {
+      console.error('remove participant error', error)
+    }
   }
 
   const handleExport = async () => {
@@ -232,11 +232,10 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
       const XLSX = await loadXlsx()
       const worksheet = XLSX.utils.json_to_sheet(
         participants.map((participant, index) => ({
-          index: index + 1,
-          fullName: participant.fullName,
-          email: participant.email ?? '',
-          state: participant.state,
-          responseState: participant.responseState ?? '',
+          "ID": index + 1,
+          "ФИО": participant.full_name,
+          "Почта": participant.email ?? '',
+          "Состояние": participant.state,
         })),
       )
       const workbook = XLSX.utils.book_new()
@@ -254,10 +253,10 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
     }
     return participants.filter((participant) => participant.state === stateFilter)
   }, [participants, stateFilter])
-
+  console.log(filteredParticipants)
   if (isLoading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+      <div className='min-h-screen  px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
         <motion.div
           className='space-y-4'
           initial='hidden'
@@ -278,7 +277,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 pb-16 pt-10 sm:px-8 lg:px-12'>
+    <div className='min-h-screen  px-4 pb-16 pt-5 sm:px-8 lg:px-12'>
       <motion.div
         className='flex flex-wrap items-center justify-between gap-4'
         initial='hidden'
@@ -292,14 +291,11 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
             Назад к анкете
           </span>
         </Link>
-        <div className='flex items-center gap-3'>
+        <div className='flex items-center mb-5  gap-3'>
           <Button className='gap-2' onClick={handleOpenAdd} disabled={addMutation.isPending}>
             <Plus className='h-4 w-4' />
             Добавить
           </Button>
-          <Link href={`/admin/survey/${surveyId}/results`} className='text-sm text-[#2563eb] hover:underline'>
-            Смотреть результаты
-          </Link>
           <Button variant='outline' className='gap-2' onClick={handleExport}>
             <FileSpreadsheet className='h-4 w-4' />
             Экспортировать список
@@ -349,69 +345,68 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
               Участники пока не найдены.
             </div>
           ) : (
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200 text-left'>
-                <thead className='bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500'>
-                  <tr>
-                    <th className='px-4 py-3'>Участник</th>
-                    <th className='px-4 py-3'>Контакты</th>
-                    <th className='px-4 py-3'>Статус</th>
-                    <th className='px-4 py-3'>Срок действия</th>
-                    <th className='px-4 py-3 text-right'>Карточка</th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y divide-gray-100 text-sm text-gray-700'>
+              <Table className={'min-w-full divide-y divide-gray-200 text-left'}>
+                <TableHeader className={''}>
+                  <TableRow className={''}>
+                    <TableHead className="w-[100px]">Участник</TableHead>
+                    <TableHead className={"px-4 py-3"}>Контакты</TableHead>
+                    <TableHead className={'px-4 py-3'}>Статус</TableHead>
+                    <TableHead className={'px-4 py-3'}>Срок действия</TableHead>
+                    <TableHead className="text-right">Карточка</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className={'divide-y divide-gray-100 text-sm text-gray-700'}>
                   {filteredParticipants.map((participant) => (
-                    <tr key={participant.id} className='transition-colors hover:bg-slate-50'>
-                      <td className='px-4 py-3'>
-                        <div className='font-medium text-gray-900'>{participant.fullName}</div>
-                        <div className='text-xs text-gray-500'>Источник: {participant.source === 'bot' ? 'бот' : 'админ'}</div>
-                      </td>
-                      <td className='px-4 py-3'>{participant.email ?? '—'}</td>
-                      <td className='px-4 py-3'>
-                        <div>{enrollmentLabels[participant.state] ?? participant.state}</div>
-                        <div className='text-xs text-gray-500'>
-                          {participant.responseState ? responseLabels[participant.responseState] ?? participant.responseState : '—'}
-                        </div>
-                      </td>
-                      <td className='px-4 py-3'>
-                        <div className='text-sm font-medium text-gray-900'>{formatDateTime(getParticipantTokenExpiry(participant))}</div>
-                        <div className='text-xs text-gray-500'>Срок действия приглашения</div>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='mt-2'
-                          onClick={() => handleOpenExtend(participant)}
-                          disabled={extendMutation.isPending}
-                        >
-                          Продлить
-                        </Button>
-                      </td>
-                      <td className='px-4 py-3 text-right'>
-                        <div className='flex items-center justify-end gap-2'>
-                          <Button
-                            size='icon'
-                            variant='ghost'
-                            className='text-red-500 hover:text-red-600'
-                            onClick={() => handleRemoveParticipant(participant)}
-                            disabled={removeMutation.isPending}
-                            title='Удалить участника'
-                          >
-                            <Trash2 className='h-4 w-4' />
-                          </Button>
-                          <Link
-                            href={`/admin/survey/${surveyId}/participants/${participant.id}`}
-                            className='text-sm font-medium text-[#2563eb] hover:underline'
-                          >
-                            Открыть
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
+                      <TableRow key={participant.enrollment_id} className={'transition-colors hover:bg-slate-50'}>
+                        <TableCell className='px-4 py-3'>
+                          <div className='font-medium text-gray-900'>{participant.full_name}</div>
+                          <div className='text-xs text-gray-500'>Источник: {participant.source === 'bot' ? 'бот' : 'админ'}</div>
+                        </TableCell>
+                        <TableCell className='px-4 py-3'>
+                          {participant.email ?? '—'}
+                        </TableCell>
+                        <TableCell className='px-4 py-3'>
+                          <div>{enrollmentLabels[participant.state] ?? participant.state}</div>
+                          <div className='text-xs text-gray-500'>
+                            {participant.responseState ? responseLabels[participant.responseState] ?? participant.responseState : '—'}
+                          </div>
+                        </TableCell>
+                        <TableCell className='px-4 py-3'>
+                          <div className='text-sm font-medium text-gray-900'>{formatDateTime(getParticipantTokenExpiry(participant))}</div>
+                          <div className='text-xs text-gray-500'>Срок действия приглашения</div>
+                          <div className="flex items-center">
+                            <Button
+                                size='sm'
+                                variant='outline'
+                                className='mt-2'
+                                onClick={() => handleOpenExtend(participant)}
+                                disabled={extendMutation.isPending}
+                            >
+                              Продлить
+                            </Button>
+                            <Button
+                                size='icon'
+                                variant='ghost'
+                                className='text-red-500 hover:text-red-600'
+                                onClick={() => handleRemoveParticipant(participant)}
+                                disabled={removeMutation.isPending}
+                                title='Удалить участника'
+                            >
+                              <Trash2 className='h-4 w-4' />
+                            </Button>
+                          </div>
+                        </TableCell>
+                          <TableCell className='px-4 py-3'>
+                          <CopyButton variant={"secondary"} content={`http://localhost:3000/survey/${participant.token}`}  size={"lg"}  />
+                          </TableCell>
+
+                      </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+
+
+                </TableBody>
+              </Table>
+
           )}
         </CardContent>
       </Card>

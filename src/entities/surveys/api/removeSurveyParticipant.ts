@@ -6,8 +6,7 @@ export interface RemoveSurveyParticipantParams {
 }
 
 export async function removeSurveyParticipant({ surveyId, enrollmentId }: RemoveSurveyParticipantParams) {
-  const query = new URLSearchParams({ survey: surveyId, enrollment: enrollmentId })
-  const response = await apiFetch(`/api/survey/enrollment?${query.toString()}`, {
+  const response = await apiFetch(`/api/survey/${surveyId}/participants/${enrollmentId}`, {
     method: 'DELETE',
   })
 
