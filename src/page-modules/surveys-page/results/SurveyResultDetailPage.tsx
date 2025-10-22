@@ -6,8 +6,6 @@ import {motion} from 'motion/react'
 import {ArrowLeft, FileText, Loader2} from 'lucide-react'
 
 import {useSurveyResult} from '@/entities/surveys/model/surveyResultQuery'
-import type {EnrollmentState, ResponseState, SurveyResultsAnswer} from '@/entities/surveys/types'
-import type {TemplateField, TemplateSection} from '@/entities/templates/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Button} from '@/shared/ui/button'
 import {Skeleton} from '@/shared/ui/skeleton'
@@ -15,278 +13,9 @@ import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
 import ErrorFetch from '@/widgets/FetchError/ErrorFetch'
 import {toast} from 'sonner'
 import {ensureCyrillicFont, getPdfFontCss, loadJsPdf} from '@/shared/lib/loadJsPdf'
+import {buildSectionDisplays, formatDateTime, helper} from "@/shared/lib";
+import {enrollmentLabels, responseLabels} from "@/shared/lib/";
 
-const enrollmentLabels: Partial<Record<EnrollmentState, string>> = {
-  invited: 'Приглашён',
-  pending: 'Ожидает',
-  approved: 'Одобрен',
-  active: 'Активен',
-  rejected: 'Отклонён',
-  removed: 'Удалён',
-  expired: 'Истёк',
-}
-
-const responseLabels: Partial<Record<ResponseState, string>> = {
-  in_progress: 'В процессе',
-  submitted: 'Завершено',
-}
-
-const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
-
-const dateFormatter = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium' })
-const numberFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 })
-
-function formatDateTime(value?: string | null) {
-  if (!value) return '—'
-  try {
-    return dateTimeFormatter.format(new Date(value))
-  } catch {
-    return value
-  }
-}
-
-function formatDateOnly(value?: string | null) {
-  if (!value) return '—'
-  try {
-    const parsed = value.includes('T') ? new Date(value) : new Date(`${value}T00:00:00`)
-    return dateFormatter.format(parsed)
-  } catch {
-    return value
-  }
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function coerceTemplateSections(snapshot: unknown): TemplateSection[] {
-  if (!snapshot) return []
-
-  const fromArray = (sections: unknown[]): TemplateSection[] =>
-    sections
-      .map((section, sectionIndex) => {
-        if (!isPlainRecord(section)) return null
-
-        const fieldsSource = Array.isArray(section.fields) ? section.fields : []
-        const fields = fieldsSource
-          .map((field, fieldIndex) => {
-            if (!isPlainRecord(field)) return null
-            const options = Array.isArray(field.options)
-              ? field.options
-                  .filter(isPlainRecord)
-                  .map((option) => ({
-                    code: typeof option.code === 'string' ? option.code : String(option.code ?? ''),
-                    label: typeof option.label === 'string' ? option.label : String(option.label ?? option.code ?? ''),
-                  }))
-              : undefined
-
-            const code = typeof field.code === 'string' ? field.code : ''
-            const label = typeof field.label === 'string' ? field.label : code
-
-            return {
-              id: typeof field.id === 'string' ? field.id : `${sectionIndex}-${fieldIndex}`,
-              code,
-              type: typeof field.type === 'string' ? (field.type as TemplateField['type']) : 'text',
-              label,
-              required: field.required === true,
-              options,
-            }
-          })
-          .filter(Boolean) as TemplateField[]
-
-        const code = typeof section.code === 'string' ? section.code : ''
-        const title =
-          typeof section.title === 'string'
-            ? section.title
-            : code
-              ? code
-              : `Секция ${sectionIndex + 1}`
-
-        return {
-          id: typeof section.id === 'string' ? section.id : `${sectionIndex}`,
-          code,
-          title,
-          repeatable: section.repeatable === true,
-          min: typeof section.min === 'number' ? section.min : undefined,
-          max: typeof section.max === 'number' ? section.max : undefined,
-          fields,
-        }
-      })
-      .filter(Boolean) as TemplateSection[]
-
-  if (Array.isArray(snapshot)) {
-    return fromArray(snapshot)
-  }
-
-  if (typeof snapshot === 'string') {
-    try {
-      const parsed = JSON.parse(snapshot)
-      return Array.isArray(parsed) ? fromArray(parsed) : []
-    } catch {
-      return []
-    }
-  }
-
-  if (isPlainRecord(snapshot)) {
-    if (Array.isArray(snapshot.published_schema_json)) {
-      return fromArray(snapshot.published_schema_json)
-    }
-    if (Array.isArray(snapshot.draft_schema_json)) {
-      return fromArray(snapshot.draft_schema_json)
-    }
-  }
-
-  return []
-}
-
-type FieldDisplay = {
-  label: string
-  value: string
-  isJson?: boolean
-}
-
-type NormalizedAnswerValue = {
-  value: string
-  isJson?: boolean
-}
-
-type SectionDisplay = {
-  code: string
-  title: string
-  repeatable: boolean
-  items: { key: string; heading?: string; fields: FieldDisplay[] }[]
-}
-
-function extractRepeatHeading(repeatPath: string, index: number) {
-  if (!repeatPath) {
-    return `Запись ${index + 1}`
-  }
-  const match = repeatPath.match(/:(\d+)$/)
-  if (match) {
-    return `Запись ${Number(match[1]) + 1}`
-  }
-  const numeric = Number(repeatPath)
-  if (!Number.isNaN(numeric)) {
-    return `Запись ${numeric + 1}`
-  }
-  return `Запись ${index + 1}`
-}
-
-function normalizeAnswerValue(answer: SurveyResultsAnswer): NormalizedAnswerValue {
-  if (typeof answer.value_text === 'string' && answer.value_text.trim().length > 0) {
-    return { value: answer.value_text.trim() }
-  }
-
-  if (answer.value_number !== undefined && answer.value_number !== null && !Number.isNaN(answer.value_number)) {
-    return { value: numberFormatter.format(answer.value_number) }
-  }
-
-  if (answer.value_bool !== undefined && answer.value_bool !== null) {
-    return { value: answer.value_bool ? 'Да' : 'Нет' }
-  }
-
-  if (typeof answer.value_datetime === 'string' && answer.value_datetime.trim().length) {
-    return { value: formatDateTime(answer.value_datetime) }
-  }
-
-  if (typeof answer.value_date === 'string' && answer.value_date.trim().length) {
-    return { value: formatDateOnly(answer.value_date) }
-  }
-
-  if (answer.value_json !== undefined && answer.value_json !== null) {
-    if (Array.isArray(answer.value_json)) {
-      if (answer.value_json.length === 0) {
-        return { value: '—' }
-      }
-      const list = answer.value_json.map((item) => (typeof item === 'string' ? item : String(item)))
-      return { value: list.join(', ') }
-    }
-    if (isPlainRecord(answer.value_json)) {
-      return { value: JSON.stringify(answer.value_json, null, 2), isJson: true }
-    }
-    return { value: String(answer.value_json) }
-  }
-
-  return { value: '—' }
-}
-
-function buildSectionDisplays(sections: TemplateSection[], answers: SurveyResultsAnswer[]): SectionDisplay[] {
-  if (!answers.length) return []
-
-  const sectionOrder = new Map<string, number>()
-  const sectionMap = new Map<string, TemplateSection>()
-
-  sections.forEach((section, index) => {
-    if (!section.code) return
-    sectionOrder.set(section.code, index)
-    sectionMap.set(section.code, section)
-  })
-
-  const grouped = new Map<string, { repeatable: boolean; title: string; order: string[]; byRepeat: Map<string, FieldDisplay[]> }>()
-
-  answers.forEach((answer) => {
-    const sectionCode = answer.section_code || ''
-    const section = sectionMap.get(sectionCode)
-    const repeatKey = answer.repeat_path && answer.repeat_path.length > 0 ? answer.repeat_path : 'default'
-
-    const normalized = normalizeAnswerValue(answer)
-    const fieldDef = section?.fields.find((field) => field.code === answer.question_code)
-    const label = fieldDef?.label || answer.question_code
-
-    if (!grouped.has(sectionCode)) {
-      grouped.set(sectionCode, {
-        repeatable: Boolean(section?.repeatable),
-        title: section?.title || sectionCode || 'Без названия',
-        order: [],
-        byRepeat: new Map(),
-      })
-    }
-
-    const bucket = grouped.get(sectionCode)!
-    if (!bucket.byRepeat.has(repeatKey)) {
-      bucket.byRepeat.set(repeatKey, [])
-      bucket.order.push(repeatKey)
-    }
-
-    bucket.byRepeat.get(repeatKey)!.push({
-      label,
-      value: normalized.value,
-      isJson: normalized.isJson,
-    })
-  })
-
-  const displays: SectionDisplay[] = []
-
-  grouped.forEach((bucket, code) => {
-    const repeatable = bucket.repeatable || bucket.order.length > 1
-    const items = bucket.order.map((key, index) => {
-      const heading = repeatable ? extractRepeatHeading(key === 'default' ? '' : key, index) : undefined
-      return {
-        key,
-        heading,
-        fields: bucket.byRepeat.get(key) ?? [],
-      }
-    })
-
-    displays.push({
-      code,
-      title: bucket.title,
-      repeatable,
-      items,
-    })
-  })
-
-  displays.sort((a, b) => {
-    const orderA = sectionOrder.get(a.code) ?? Number.MAX_SAFE_INTEGER
-    const orderB = sectionOrder.get(b.code) ?? Number.MAX_SAFE_INTEGER
-    return orderA - orderB
-  })
-
-  return displays
-}
 
 export default function SurveyResultDetailPage({
   surveyId,
@@ -305,7 +34,7 @@ export default function SurveyResultDetailPage({
   const response = data?.response
   const answers = useMemo(() => data?.answers ?? [], [data?.answers])
 
-  const formSections = useMemo(() => coerceTemplateSections(survey?.form_snapshot_json), [survey?.form_snapshot_json])
+  const formSections = useMemo(() => helper(survey?.form_snapshot_json), [survey?.form_snapshot_json])
 
   const sectionDisplays = useMemo(() => buildSectionDisplays(formSections, answers), [formSections, answers])
 
@@ -326,12 +55,21 @@ export default function SurveyResultDetailPage({
 
     let originalDataAttr: string | null = null
     let originalFontFamily = ''
+    let originalFontSize = ''
+    let originalLineHeight = ''
+    let originalMaxWidth = ''
+    let originalMargin = ''
 
     try {
       if (document.fonts) {
+        const fontVariants = [
+          "400 16px 'LiberationSans'",
+          "700 16px 'LiberationSans'",
+          "400 16px 'Liberation Sans'",
+          "700 16px 'Liberation Sans'",
+        ]
         await Promise.allSettled([
-          document.fonts.load("400 16px 'Liberation Sans'"),
-          document.fonts.load("700 16px 'Liberation Sans'"),
+          ...fontVariants.map((font) => document.fonts.load(font)),
           document.fonts.ready,
         ])
       }
@@ -343,33 +81,54 @@ export default function SurveyResultDetailPage({
       const doc = new jsPDF({ unit: 'pt', format: 'a4' })
       const fontName = await ensureCyrillicFont(doc)
       doc.setFont(fontName, 'normal')
+      const pdfFontFamily = "'LiberationSans', 'Liberation Sans', Arial, Helvetica, sans-serif"
 
-      const margin = 48
+      const margin = 40
       const pageWidth = doc.internal.pageSize.getWidth()
-      const windowWidth = Math.max(content.scrollWidth, content.offsetWidth, 1024)
+      const baseWindowWidth = Math.max(content.scrollWidth, content.offsetWidth, 960)
+      const windowWidth = Math.min(baseWindowWidth, 800)
       const filename = `survey-${surveyId}-participant-${enrollment.id}.pdf`
 
       originalDataAttr = content.getAttribute('data-pdf-export')
       originalFontFamily = content.style.fontFamily
+      originalFontSize = content.style.fontSize
+      originalLineHeight = content.style.lineHeight
+      originalMaxWidth = content.style.maxWidth
+      originalMargin = content.style.margin
       content.setAttribute('data-pdf-export', 'true')
-      content.style.fontFamily = "'Liberation Sans', Arial, Helvetica, sans-serif"
+      content.style.fontFamily = pdfFontFamily
+      content.style.fontSize = '0.95rem'
+      content.style.lineHeight = '1.5'
+      content.style.maxWidth = '800px'
+      content.style.margin = '0 auto'
 
       await doc.html(content, {
-        margin: [margin, margin, margin, margin],
+        margin: [0, margin, margin, 0],
         autoPaging: 'text',
-        width: pageWidth - margin * 2,
+        width: pageWidth,
         windowWidth,
         html2canvas: {
-          scale: 0.8,
+          scale: 0.75,
           useCORS: true,
           backgroundColor: '#ffffff',
           onclone: (docClone) => {
             docClone.documentElement.setAttribute('data-pdf-export', 'true')
+            docClone.documentElement.style.fontSize = '15px'
             const style = docClone.createElement('style')
             style.setAttribute('data-pdf-fonts', 'true')
             style.textContent = fontCss
             docClone.head.appendChild(style)
-            docClone.body.style.fontFamily = "'Liberation Sans', Arial, Helvetica, sans-serif"
+            docClone.body.style.fontFamily = pdfFontFamily
+            docClone.body.style.fontSize = '0.95rem'
+            docClone.body.style.lineHeight = '1.5'
+
+            const exportRoot = docClone.querySelector<HTMLElement>('[data-pdf-export="true"]')
+            if (exportRoot) {
+              exportRoot.style.maxWidth = '960px'
+              exportRoot.style.margin = '0 auto'
+              exportRoot.style.fontSize = '0.95rem'
+              exportRoot.style.lineHeight = '1.5'
+            }
           },
         },
       })
@@ -387,6 +146,10 @@ export default function SurveyResultDetailPage({
           content.setAttribute('data-pdf-export', originalDataAttr)
         }
         content.style.fontFamily = originalFontFamily
+        content.style.fontSize = originalFontSize
+        content.style.lineHeight = originalLineHeight
+        content.style.maxWidth = originalMaxWidth
+        content.style.margin = originalMargin
       }
       setIsExporting(false)
     }

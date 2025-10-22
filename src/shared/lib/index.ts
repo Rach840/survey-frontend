@@ -1,2 +1,6 @@
 export * from "./utils"
 export * from "./broadcast"
+export * from "./helper"
+export * from "./helpers"
+export * from "./loadJsPdf"
+export * from "./loadXlsx"

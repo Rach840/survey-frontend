@@ -1,29 +1,18 @@
 import type {NextRequest} from 'next/server'
 import {NextResponse} from 'next/server'
-import {cookies} from 'next/headers'
 
 import {getApiBaseUrl} from '@/shared/api/base-url'
+import ensureAccess from "@/shared/api/cookie";
 
-async function ensureAccessToken() {
-  const jar = await cookies()
-  const access = jar.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ surveyId: string }> },
 ) {
   try {
-    const access = await ensureAccessToken()
+    const access = await ensureAccess()
     const payload = await req.json().catch(() => ({}))
     const { surveyId } = await context.params
-    console.log('asdfasdfasdf')
     const upstream = await fetch(`${getApiBaseUrl()}/api/survey/${surveyId}/participants`, {
       method: 'POST',
       headers: {

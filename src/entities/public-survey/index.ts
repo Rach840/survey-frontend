@@ -1,4 +1,5 @@
 export * from './types'
 export * from './api/getPublicSurveySession'
 export * from './api/submitPublicSurveyResponse'
+export * from './api/startPublicSurveySession'
 export * from './model/publicSurveySessionQuery'

@@ -1,19 +1,9 @@
 import type {NextRequest} from 'next/server'
 import {NextResponse} from 'next/server'
-import {cookies} from 'next/headers'
 
 import {getApiBaseUrl} from '@/shared/api/base-url'
+import ensureAccessToken from "@/shared/api/cookie";
 
-async function ensureAccessToken() {
-  const cookieStore = await cookies()
-  const access = cookieStore.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 function buildUpstreamUrl(path: string, searchParams: URLSearchParams) {
   const url = new URL(path)

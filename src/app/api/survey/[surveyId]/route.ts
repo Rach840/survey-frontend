@@ -1,18 +1,8 @@
 import type {NextRequest} from 'next/server'
 import {NextResponse} from 'next/server'
-import {cookies} from 'next/headers'
 import {getApiBaseUrl} from '@/shared/api/base-url'
+import ensureAccess from "@/shared/api/cookie";
 
-async function ensureAccess() {
-  const jar = await cookies()
-  const access = jar.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 async function forwardRequest(
   req: Request,
@@ -65,7 +55,7 @@ export async function PATCH(
     const rawPayload = await req.json().catch(() => ({}))
     const access = await ensureAccess()
     const { surveyId } = await context.params
-
+    console.log('asdfadsf',rawPayload)
     const upstreamPayload: Record<string, unknown> = {}
 
     if (rawPayload.title !== undefined) {
@@ -81,21 +71,21 @@ export async function PATCH(
     }
 
     if (rawPayload.maxParticipants !== undefined) {
-      upstreamPayload.max_participants = { value: rawPayload.maxParticipants ?? null }
+      upstreamPayload.max_participants = rawPayload.maxParticipants ?? null
     }
 
-    if (rawPayload.publicSlug !== undefined) {
-      upstreamPayload.public_slug = { value: rawPayload.publicSlug ?? null }
+    if (rawPayload.public_slug !== undefined) {
+      upstreamPayload.public_slug =rawPayload.public_slug ?? null
     }
 
-    if (rawPayload.startsAt !== undefined) {
-      upstreamPayload.starts_at = { value: rawPayload.startsAt ?? null }
+    if (rawPayload.starts_at !== undefined) {
+      upstreamPayload.starts_at = rawPayload.starts_at ?? null
     }
 
-    if (rawPayload.endsAt !== undefined) {
-      upstreamPayload.ends_at = { value: rawPayload.endsAt ?? null }
+    if (rawPayload.ends_at !== undefined) {
+      upstreamPayload.ends_at =  rawPayload.ends_at ?? null
     }
-
+    console.log('upstream',upstreamPayload)
     const upstream = await forwardRequest(req, surveyId, {
       method: 'PATCH',
       headers: {

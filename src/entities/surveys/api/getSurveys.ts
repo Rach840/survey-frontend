@@ -1,7 +1,7 @@
 import {apiFetch} from '@/shared'
-import type {Survey} from '../types'
+import {SurveyWithStatistic} from "@/entities/surveys/types";
 
-export async function getSurveys(): Promise<Survey[]> {
+export async function getSurveys(): Promise<SurveyWithStatistic[]> {
     const response = await apiFetch(`/api/survey/getAllSurvey`)
 
     if (!response.ok) {

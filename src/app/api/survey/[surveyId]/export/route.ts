@@ -1,18 +1,7 @@
 import type {NextRequest} from 'next/server'
-import {cookies} from 'next/headers'
 
 import {getApiBaseUrl} from '@/shared/api/base-url'
-
-async function ensureAccessToken() {
-  const cookieStore = await cookies()
-  const access = cookieStore.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
+import ensureAccessToken from "@/shared/api/cookie";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ surveyId: string }> }) {
   try {

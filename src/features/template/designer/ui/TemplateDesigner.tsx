@@ -1,6 +1,6 @@
 "use client"
 
-import {useCallback, useEffect, useState, type PointerEvent} from "react"
+import {type PointerEvent, useCallback, useEffect, useState} from "react"
 import {Button} from "@/shared/ui/button"
 import {Input} from "@/shared/ui/input"
 import {Label} from "@/shared/ui/label"
@@ -9,7 +9,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/s
 import {Checkbox} from "@/shared/ui/checkbox"
 import {Textarea} from "@/shared/ui/textarea"
 import {Skeleton} from "@/shared/ui/skeleton"
-import {GripVertical, Plus, Save, Trash2, Upload} from "lucide-react"
+import {GripVertical, Plus, Save, Trash2} from "lucide-react"
 import {Reorder, useDragControls} from "motion/react"
 import type {DesignerField, DesignerFieldType, DesignerSection, DesignerTemplate, TemplateUpsertPayload} from "../types"
 import {normalizeDesignerTemplate} from "../lib"
@@ -222,11 +222,6 @@ export function TemplateDesigner({
     setTemplate(initialTemplate ? cloneTemplate(initialTemplate) : cloneTemplate(DEFAULT_TEMPLATE))
   }
 
-  const exportJSON = () => {
-    const payload = normalizeDesignerTemplate(template)
-    console.log(JSON.stringify(payload, null, 2))
-    toast.success("JSON экспортирован в консоль")
-  }
 
   const sections = template.sections
 
@@ -248,10 +243,6 @@ export function TemplateDesigner({
           <p className="text-gray-600">{headerSubtitle}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportJSON}>
-            <Upload className="w-4 h-4 mr-2" />
-            Экспорт JSON
-          </Button>
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}

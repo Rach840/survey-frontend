@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { getApiBaseUrl } from '@/shared/api/base-url'
+import {NextResponse} from 'next/server'
+import {cookies} from 'next/headers'
+import {getApiBaseUrl} from '@/shared/api/base-url'
 
 export async function POST(req: Request) {
   const payload = await req.json()
@@ -22,7 +22,6 @@ export async function POST(req: Request) {
     cache: 'no-store',
   })
 
-  console.log('asdfsdf', upstream)
 
   if (!upstream.ok) {
     return new Response(await upstream.text(), { status: upstream.status })

@@ -57,3 +57,8 @@ export interface PublicSurveySubmitPayload {
   channel?: 'web' | 'tg_webapp' | 'api'
   answers: SurveySubmissionAnswer[]
 }
+
+export interface StartPublicSurveyPayload {
+  token: string
+  channel?: string
+}

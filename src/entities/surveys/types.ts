@@ -9,7 +9,10 @@ export type EnrollmentState =
   | 'rejected'
   | 'expired'
 export type ResponseState = 'in_progress' | 'submitted'
-
+export type DraftPayload = {
+  updatedAt: number
+  values: Record<string, unknown>
+}
 export interface SurveyStats {
   invited: number
   pending: number
@@ -65,6 +68,11 @@ export interface Survey {
   starts_at?: string | null
   ends_at?: string | null
   created_at: string
+
+}
+export interface SurveyWithStatistic {
+  survey: Survey
+  statistics: SurveyResultsStatistics
 }
 
 export interface SurveyInvitationSummary {

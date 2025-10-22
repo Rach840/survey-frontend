@@ -1,18 +1,8 @@
 import type {NextRequest} from 'next/server'
-import {cookies} from 'next/headers'
 
 import {getApiBaseUrl} from '@/shared/api/base-url'
+import ensureAccess from "@/shared/api/cookie";
 
-async function ensureAccessToken() {
-  const cookieStore = await cookies()
-  const access = cookieStore.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { surveyId, participantId } = await context.params
-    const access = await ensureAccessToken()
+    const access = await ensureAccess()
     const search = request.nextUrl.searchParams
     const upstreamUrl = new URL(`${getApiBaseUrl()}/api/survey/${surveyId}/participants/${participantId}/export`)
     search.forEach((value, key) => upstreamUrl.searchParams.set(key, value))

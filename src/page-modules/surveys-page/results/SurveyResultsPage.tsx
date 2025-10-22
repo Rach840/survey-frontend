@@ -7,7 +7,7 @@ import {ArrowLeft, FileSpreadsheet, Loader2} from 'lucide-react'
 
 import {useSurveyResults} from '@/entities/surveys/model/surveyResultsQuery'
 import type {SurveyResultsAnswer, SurveyResultsItem, SurveyResultsStatistics,} from '@/entities/surveys/types'
-import type {TemplateField, TemplateSection} from '@/entities/templates/types'
+import type {TemplateSection} from '@/entities/templates/types'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Button} from '@/shared/ui/button'
 import {Skeleton} from '@/shared/ui/skeleton'
@@ -15,117 +15,8 @@ import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
 import ErrorFetch from '@/widgets/FetchError/ErrorFetch'
 import {toast} from 'sonner'
 import {loadXlsx} from '@/shared/lib/loadXlsx'
+import {enrollmentLabels, formatDateTime, formatNumber, helper, mapMetrics, responseLabels} from "@/shared/lib";
 
-const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
-
-function formatDateTime(value?: string | null) {
-  if (!value) return '—'
-  try {
-    return dateTimeFormatter.format(new Date(value))
-  } catch {
-    return value
-  }
-}
-
-const numberFormatter = new Intl.NumberFormat('ru-RU')
-
-function formatNumber(value?: number | null) {
-  if (value === undefined || value === null || Number.isNaN(value)) return '0'
-  return numberFormatter.format(value)
-}
-
-function normalizePercentage(value?: number | null) {
-  if (value === undefined || value === null || Number.isNaN(value)) return 0
-  const scaled = value <= 1 ? value * 100 : value
-  return Math.max(0, Math.min(100, Math.round(scaled)))
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function coerceTemplateSections(snapshot: unknown): TemplateSection[] {
-  if (!snapshot) return []
-
-  const fromArray = (sections: unknown[]): TemplateSection[] =>
-    sections
-      .map((section, sectionIndex) => {
-        if (!isPlainRecord(section)) return null
-
-        const fieldsSource = Array.isArray(section.fields) ? section.fields : []
-        const fields = fieldsSource
-          .map((field, fieldIndex) => {
-            if (!isPlainRecord(field)) return null
-            const options = Array.isArray(field.options)
-              ? field.options
-                  .filter(isPlainRecord)
-                  .map((option) => ({
-                    code: typeof option.code === 'string' ? option.code : String(option.code ?? ''),
-                    label: typeof option.label === 'string' ? option.label : String(option.label ?? option.code ?? ''),
-                  }))
-              : undefined
-
-            const code = typeof field.code === 'string' ? field.code : ''
-            const label = typeof field.label === 'string' ? field.label : code
-
-            return {
-              id: typeof field.id === 'string' ? field.id : `${sectionIndex}-${fieldIndex}`,
-              code,
-              type: typeof field.type === 'string' ? (field.type as TemplateField['type']) : 'text',
-              label,
-              required: field.required === true,
-              options,
-            }
-          })
-          .filter(Boolean) as TemplateField[]
-
-        const code = typeof section.code === 'string' ? section.code : ''
-        const title =
-          typeof section.title === 'string'
-            ? section.title
-            : code
-              ? code
-              : `Секция ${sectionIndex + 1}`
-
-        return {
-          id: typeof section.id === 'string' ? section.id : `${sectionIndex}`,
-          code,
-          title,
-          repeatable: section.repeatable === true,
-          min: typeof section.min === 'number' ? section.min : undefined,
-          max: typeof section.max === 'number' ? section.max : undefined,
-          fields,
-        }
-      })
-      .filter(Boolean) as TemplateSection[]
-
-  if (Array.isArray(snapshot)) {
-    return fromArray(snapshot)
-  }
-
-  if (typeof snapshot === 'string') {
-    try {
-      const parsed = JSON.parse(snapshot)
-      return Array.isArray(parsed) ? fromArray(parsed) : []
-    } catch {
-      return []
-    }
-  }
-
-  if (isPlainRecord(snapshot)) {
-    if (Array.isArray(snapshot.published_schema_json)) {
-      return fromArray(snapshot.published_schema_json)
-    }
-    if (Array.isArray(snapshot.draft_schema_json)) {
-      return fromArray(snapshot.draft_schema_json)
-    }
-  }
-
-  return []
-}
 
 type FieldMeta = {
   sectionTitle: string
@@ -134,6 +25,11 @@ type FieldMeta = {
 
 type FieldLookup = {
   resolve: (sectionCode: string | null | undefined, questionCode: string) => FieldMeta
+}
+
+type FieldColumn = {
+  header: string
+  keys: string[]
 }
 
 function createFieldLookup(sections: TemplateSection[]): FieldLookup {
@@ -172,6 +68,88 @@ function createFieldLookup(sections: TemplateSection[]): FieldLookup {
       }
     },
   }
+}
+
+function ensureUniqueHeader(
+  baseLabel: string,
+  sectionTitle: string,
+  usedHeaders: Set<string>,
+  fallbackIndex: number,
+): string {
+  const label = baseLabel.trim().length > 0 ? baseLabel.trim() : `Поле ${fallbackIndex}`
+  if (!usedHeaders.has(label)) {
+    usedHeaders.add(label)
+    return label
+  }
+
+  const withSection = sectionTitle.trim().length > 0 ? `${label} (${sectionTitle.trim()})` : label
+  if (!usedHeaders.has(withSection)) {
+    usedHeaders.add(withSection)
+    return withSection
+  }
+
+  let suffix = 2
+  let candidate = `${withSection} #${suffix}`
+  while (usedHeaders.has(candidate)) {
+    suffix += 1
+    candidate = `${withSection} #${suffix}`
+  }
+  usedHeaders.add(candidate)
+  return candidate
+}
+
+function buildFieldColumns(
+  sections: TemplateSection[],
+  results: SurveyResultsItem[],
+  fieldLookup: FieldLookup,
+): FieldColumn[] {
+  const columns: FieldColumn[] = []
+  const usedHeaders = new Set<string>()
+  const knownKeys = new Set<string>()
+
+  const registerColumn = (meta: FieldMeta, rawKeys: string[]) => {
+    const keys = Array.from(new Set(rawKeys.filter(Boolean)))
+    if (keys.length === 0) return
+    const hasNewKey = keys.some((key) => !knownKeys.has(key))
+    if (!hasNewKey) return
+
+    const header = ensureUniqueHeader(meta.fieldLabel || '', meta.sectionTitle || '', usedHeaders, columns.length + 1)
+
+    columns.push({ header, keys })
+    keys.forEach((key) => knownKeys.add(key))
+  }
+
+  sections.forEach((section, sectionIndex) => {
+    const sectionCode = section.code ?? ''
+    const sectionTitle = section.title || sectionCode || `Секция ${sectionIndex + 1}`
+
+    section.fields.forEach((field, fieldIndex) => {
+      const questionCode = field.code || `field_${sectionIndex}_${fieldIndex}`
+      const meta: FieldMeta = {
+        sectionTitle,
+        fieldLabel: field.label || questionCode || `Поле ${columns.length + 1}`,
+      }
+
+      registerColumn(meta, [
+        `${sectionCode}::${questionCode}`,
+        field.code ? `::${field.code}` : '',
+        field.code ?? '',
+      ])
+    })
+  })
+
+  results.forEach((item) => {
+    item.answers.forEach((answer) => {
+      const meta = fieldLookup.resolve(answer.section_code ?? undefined, answer.question_code)
+      registerColumn(meta, [
+        `${answer.section_code ?? ''}::${answer.question_code}`,
+        `::${answer.question_code}`,
+        answer.question_code,
+      ])
+    })
+  })
+
+  return columns
 }
 
 function formatAverageDuration(stats: SurveyResultsStatistics): string | null {
@@ -247,25 +225,39 @@ function formatAnswerValue(answer: SurveyResultsAnswer): string {
   return '—'
 }
 
-type MetricCard = {
-  label: string
-  value: string
-  percentage?: number
+function buildAnswerIndex(answers: SurveyResultsAnswer[]): Map<string, string> {
+  const buckets = new Map<string, Set<string>>()
+
+  answers.forEach((answer) => {
+    if (!answer.question_code) return
+    const value = formatAnswerValue(answer)
+    const normalized = value === '—' ? '' : value
+    if (!normalized) return
+
+    const keys = [
+      `${answer.section_code ?? ''}::${answer.question_code}`,
+      `::${answer.question_code}`,
+      answer.question_code,
+    ]
+
+    keys.forEach((key) => {
+      if (!key) return
+      if (!buckets.has(key)) {
+        buckets.set(key, new Set<string>())
+      }
+      buckets.get(key)!.add(normalized)
+    })
+  })
+
+  const index = new Map<string, string>()
+  buckets.forEach((values, key) => {
+    index.set(key, Array.from(values).join('\n'))
+  })
+
+  return index
 }
 
-function mapMetrics(stats: SurveyResultsStatistics | undefined): MetricCard[] {
-  if (!stats) return []
-  const completion = normalizePercentage(stats.completion_rate)
-  const overall = normalizePercentage(stats.overall_progress)
-  return [
-    { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
-    { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
-    { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
-    { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
-    { label: 'Конверсия', value: `${completion}%`, percentage: completion },
-    { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
-  ]
-}
+
 
 function getSubmittedResults(results: SurveyResultsItem[] | undefined) {
   if (!results) return []
@@ -280,13 +272,17 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
   const allResults = useMemo(() => data?.results ?? [], [data?.results])
   const submittedResults = useMemo(() => getSubmittedResults(allResults), [allResults])
   const metrics = useMemo(() => mapMetrics(stats), [stats])
-  const formSections = useMemo(() => coerceTemplateSections(survey?.form_snapshot_json), [survey?.form_snapshot_json])
+  const formSections = useMemo(() => helper(survey?.form_snapshot_json), [survey?.form_snapshot_json])
   const fieldLookup = useMemo(() => createFieldLookup(formSections), [formSections])
+  const fieldColumns = useMemo(
+    () => buildFieldColumns(formSections, allResults, fieldLookup),
+    [formSections, allResults, fieldLookup],
+  )
   const handleExport = useCallback(async () => {
-    const exportResults = getSubmittedResults(allResults)
+    const exportResults = allResults
 
     if (!exportResults.length) {
-      toast.info('Нет завершённых ответов для экспорта')
+      toast.info('Нет данных для экспорта')
       return
     }
 
@@ -295,53 +291,43 @@ export default function SurveyResultsPage({surveyId}: { surveyId: string }) {
     try {
       const XLSX = await loadXlsx()
 
-      const responsesSheet = XLSX.utils.json_to_sheet(
-        exportResults.map((item, index) => ({
+      const rows = exportResults.map((item, index) => {
+        const answersIndex = buildAnswerIndex(item.answers)
+        const baseRow: Record<string, string | number> = {
           '#': index + 1,
           'ID участника': item.enrollment.id,
-          ФИО: item.enrollment.full_name ?? '',
-          Email: item.enrollment.email ?? '',
-          Канал: item.response.channel ?? '',
-          'Статус ответа': item.response.state,
+          'ФИО': item.enrollment.full_name ?? '',
+          "Email": item.enrollment.email ?? '',
+          'Статус участия': enrollmentLabels[item.enrollment.state] ?? item.enrollment.state,
+          'Статус ответа': responseLabels[item.response.state] ?? item.response.state,
+          "Канал": item.response.channel ?? '',
           'Начато заполнение': formatDateTime(item.response.started_at),
-          'Отправлено': formatDateTime(item.response.submitted_at),
-        })),
-      )
+          "Отправлено": formatDateTime(item.response.submitted_at),
+        }
 
+        fieldColumns.forEach((column) => {
+          const value = column.keys
+            .map((key) => answersIndex.get(key))
+            .find((entry) => entry !== undefined && entry !== null && entry !== '')
+          baseRow[column.header] = value ?? ''
+        })
+
+        return baseRow
+      })
+
+      const sheet = XLSX.utils.json_to_sheet(rows)
       const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, responsesSheet, 'Responses')
+      XLSX.utils.book_append_sheet(workbook, sheet, 'результаты')
 
-      const answersRows = exportResults.flatMap((item) =>
-        item.answers.map((answer) => {
-          const meta = fieldLookup.resolve(answer.section_code, answer.question_code)
-
-          return {
-            'ID участника': item.enrollment.id,
-            ФИО: item.enrollment.full_name ?? '',
-            Email: item.enrollment.email ?? '',
-            Секция: meta.sectionTitle,
-            Вопрос: meta.fieldLabel,
-            'Код вопроса': answer.question_code,
-            Повтор: answer.repeat_path ?? '',
-            Ответ: formatAnswerValue(answer),
-          }
-        }),
-      )
-
-      if (answersRows.length) {
-        const answersSheet = XLSX.utils.json_to_sheet(answersRows)
-        XLSX.utils.book_append_sheet(workbook, answersSheet, 'Answers')
-      }
-
-      XLSX.writeFile(workbook, `survey-${surveyId}-results.xlsx`)
+      XLSX.writeFile(workbook, `анкета-${surveyId}-результаты.xlsx`)
       toast.success('Файл сформирован')
     } catch (error) {
-      console.error('survey results export error', error)
+      console.error('ошибка экспорта', error)
       toast.error('Не удалось сформировать файл')
     } finally {
       setIsExporting(false)
     }
-  }, [allResults, fieldLookup, surveyId])
+  }, [allResults, fieldColumns, surveyId])
   const averageDuration = stats ? formatAverageDuration(stats) : null
 
   if (isLoading) {

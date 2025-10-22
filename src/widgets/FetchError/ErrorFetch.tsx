@@ -6,7 +6,11 @@ import {AlertCircleIcon, ArrowLeft, RefreshCcw} from "lucide-react";
 import {Button} from "@/shared";
 import {useRouter} from "next/navigation";
 
-export default function ErrorFetch({refetch}: { refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<never, Error>>}) {
+export default function ErrorFetch({
+  refetch,
+}: {
+  refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<unknown, Error>>
+}) {
     const router = useRouter()
     return (
         <div className='min-h-screen   px-4 pb-16 pt-10 sm:px-8 lg:px-12'>

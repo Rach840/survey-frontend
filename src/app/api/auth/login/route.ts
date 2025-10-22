@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/shared/api/base-url'
+import {NextResponse} from 'next/server'
+import {getApiBaseUrl} from '@/shared/api/base-url'
 
 export async function POST(req: Request) {
   const payload = await req.json()
-  console.log('fasdfsdfdsf')
 
   const upstream = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
     method: 'POST',
@@ -12,7 +11,6 @@ export async function POST(req: Request) {
     cache: 'no-store',
   })
 
-  console.log('asdfsdf', payload)
 
   if (!upstream.ok) {
     return new Response(await upstream.text(), { status: upstream.status })

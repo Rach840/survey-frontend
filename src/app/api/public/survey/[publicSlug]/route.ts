@@ -16,7 +16,6 @@ export async function GET(
 ) {
   try {
     const { publicSlug } = (await context.params)
-    console.log('asfsdf',buildUpstreamUrl(req, publicSlug))
     const upstream = await fetch(buildUpstreamUrl(req, publicSlug), {
       method: 'GET',
       headers: {

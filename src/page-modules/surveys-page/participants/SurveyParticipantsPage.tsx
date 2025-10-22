@@ -22,35 +22,8 @@ import {addSurveyParticipant} from '@/entities/surveys/api/addSurveyParticipant'
 import {removeSurveyParticipant} from '@/entities/surveys/api/removeSurveyParticipant'
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/shared/ui/table"
 import {CopyButton} from "@/shared/ui/shadcn-io/copy-button";
+import {enrollmentLabels, formatDateTime} from "@/shared/lib/";
 
-const enrollmentLabels: Record<string, string> = {
-  invited: 'Приглашён',
-  pending: 'Ожидает',
-  approved: 'Одобрен',
-  active: 'Активен',
-  rejected: 'Отклонён',
-  removed: 'Удалён',
-  expired: 'Истёк',
-}
-
-const responseLabels: Record<string, string> = {
-  in_progress: 'В процессе',
-  submitted: 'Завершено',
-}
-
-const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
-
-function formatDateTime(value?: string | null) {
-  if (!value) return '—'
-  try {
-    return dateTimeFormatter.format(new Date(value))
-  } catch {
-    return value
-  }
-}
 
 function getParticipantTokenExpiry(participant?: SurveyParticipant | null) {
   if (!participant) return null
@@ -168,10 +141,9 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
       toast.error('Некорректная дата истечения')
       return
     }
-
     try {
       await extendMutation.mutateAsync({
-        enrollmentId: extendTarget.id,
+        enrollmentId: extendTarget.enrollment_id,
         expiresAt: parsed.toISOString(),
       })
     } catch {
@@ -239,8 +211,8 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
         })),
       )
       const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Participants')
-      XLSX.writeFile(workbook, `survey-${surveyId}-participants.xlsx`)
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Участники')
+      XLSX.writeFile(workbook, `анкета-${surveyId}-участники.xlsx`)
     } catch (error) {
       console.error('participants export error', error)
       toast.error('Не удалось сформировать файл')
@@ -350,9 +322,8 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                   <TableRow className={''}>
                     <TableHead className="w-[100px]">Участник</TableHead>
                     <TableHead className={"px-4 py-3"}>Контакты</TableHead>
-                    <TableHead className={'px-4 py-3'}>Статус</TableHead>
                     <TableHead className={'px-4 py-3'}>Срок действия</TableHead>
-                    <TableHead className="text-right">Карточка</TableHead>
+                    <TableHead className="px-4 py-3">Приглашение </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className={'divide-y divide-gray-100 text-sm text-gray-700'}>
@@ -360,25 +331,20 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                       <TableRow key={participant.enrollment_id} className={'transition-colors hover:bg-slate-50'}>
                         <TableCell className='px-4 py-3'>
                           <div className='font-medium text-gray-900'>{participant.full_name}</div>
-                          <div className='text-xs text-gray-500'>Источник: {participant.source === 'bot' ? 'бот' : 'админ'}</div>
+                          <div className='text-xs text-gray-500'>Источник: {participant.source === 'bot' ? 'бот' : 'ручной'}</div>
                         </TableCell>
                         <TableCell className='px-4 py-3'>
                           {participant.email ?? '—'}
                         </TableCell>
-                        <TableCell className='px-4 py-3'>
-                          <div>{enrollmentLabels[participant.state] ?? participant.state}</div>
-                          <div className='text-xs text-gray-500'>
-                            {participant.responseState ? responseLabels[participant.responseState] ?? participant.responseState : '—'}
-                          </div>
-                        </TableCell>
-                        <TableCell className='px-4 py-3'>
+
+                        <TableCell className='flex items-center space-x-3 px-4 py-3'>
                           <div className='text-sm font-medium text-gray-900'>{formatDateTime(getParticipantTokenExpiry(participant))}</div>
-                          <div className='text-xs text-gray-500'>Срок действия приглашения</div>
-                          <div className="flex items-center">
+
+                          <div className="flex space-x-2 items-center">
                             <Button
                                 size='sm'
                                 variant='outline'
-                                className='mt-2'
+                                className=''
                                 onClick={() => handleOpenExtend(participant)}
                                 disabled={extendMutation.isPending}
                             >
@@ -396,8 +362,9 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                             </Button>
                           </div>
                         </TableCell>
-                          <TableCell className='px-4 py-3'>
-                          <CopyButton variant={"secondary"} content={`http://localhost:3000/survey/${participant.token}`}  size={"lg"}  />
+                          <TableCell className='px-4 py-3 '>
+                          <CopyButton variant={"secondary"}  content={`http://localhost:3000/survey/${participant.token}`}  size={"lg"}  />
+
                           </TableCell>
 
                       </TableRow>

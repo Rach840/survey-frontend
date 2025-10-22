@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/shared/api/base-url'
+import {cookies} from 'next/headers'
+import {NextResponse} from 'next/server'
+import {getApiBaseUrl} from '@/shared/api/base-url'
 
 export async function POST() {
   const jar = await cookies()
@@ -49,6 +49,5 @@ export async function POST() {
     })
   }
 
-  console.log('asdfasdfadfsf')
   return res
 }

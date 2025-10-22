@@ -4,7 +4,12 @@ export interface TemplateFieldOption {
     code: string
     label: string
 }
-
+export const statusLabels: Record<string, string> = {
+    draft: 'Черновик',
+    open: 'Открыта',
+    closed: 'Закрыта',
+    archived: 'Архив',
+}
 export interface TemplateField {
     id: string
     code: string

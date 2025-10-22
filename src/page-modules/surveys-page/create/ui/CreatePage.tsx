@@ -101,7 +101,7 @@ export default function CreateSurveyPage() {
             toast.error("Некорректная дата окончания анкеты")
             return
         }
-
+     
         const payload = {
             ...data.data,
             starts_at: startsAtDate ? startsAtDate.toISOString() : undefined,
@@ -128,7 +128,7 @@ export default function CreateSurveyPage() {
                 transition={fadeTransition}
             >
             <div>
-                <Link href="/surveys">
+                <Link href="/admin/surveys">
                     <Button variant="ghost" className="mb-4">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Назад к анкетам
@@ -302,7 +302,7 @@ export default function CreateSurveyPage() {
                 variants={fadeUpVariants}
                 transition={{ ...fadeTransition, delay: 0.15 }}
             >
-                <Link href="/surveys">
+                <Link href="/admin/surveys">
                     <Button variant="outline">Отмена</Button>
                 </Link>
                 <Button

@@ -1,23 +1,14 @@
 import type {NextRequest} from 'next/server'
 import {NextResponse} from 'next/server'
-import {cookies} from 'next/headers'
 
 import {getApiBaseUrl} from '@/shared/api/base-url'
+import ensureAccessToken from "@/shared/api/cookie";
 
-async function ensureAccessToken() {
-  const cookieStore = await cookies()
-  const access = cookieStore.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 export async function POST(request: NextRequest) {
   try {
     const access = await ensureAccessToken()
+
     const searchParams = request.nextUrl.searchParams
     const enrollmentId = searchParams.get('enrollment')
     const surveyId = searchParams.get('survey')
@@ -26,19 +17,17 @@ export async function POST(request: NextRequest) {
       return new Response('Missing query params: enrollment, survey', { status: 400 })
     }
 
-    const upstreamUrl = new URL(`${getApiBaseUrl()}/api/survey/enrollment/extend`)
-    upstreamUrl.searchParams.set('enrollment', enrollmentId)
-    upstreamUrl.searchParams.set('survey', surveyId)
-
+    const upstreamUrl = new URL(`${getApiBaseUrl()}/api/survey/${surveyId}/participants/token`)
+    console.log(upstreamUrl)
     const body = await request.json().catch(() => ({}))
-
+    console.log({expires_at: body.expires_at,enrollmentId:Number(enrollmentId)})
     const upstream = await fetch(upstreamUrl, {
-      method: 'POST',
+      method: 'PATCH',
       headers: {
         Authorization: `Bearer ${access}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({expires_at: body.expires_at,enrollmentId:Number(enrollmentId)}),
       cache: 'no-store',
     })
 

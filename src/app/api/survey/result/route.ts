@@ -1,23 +1,13 @@
 import type {NextRequest} from 'next/server'
 import {NextResponse} from 'next/server'
-import {cookies} from 'next/headers'
 
 import {getApiBaseUrl} from '@/shared/api/base-url'
+import ensureAccess from "@/shared/api/cookie";
 
-async function ensureAccessToken() {
-  const cookieStore = await cookies()
-  const access = cookieStore.get('__Host-access')?.value
-
-  if (!access) {
-    throw new Response('Unauthorized', { status: 401 })
-  }
-
-  return access
-}
 
 export async function GET(request: NextRequest) {
   try {
-    const access = await ensureAccessToken()
+    const access = await ensureAccess()
     const searchParams = request.nextUrl.searchParams
     const enrollmentId = searchParams.get('enrollment')
     const surveyId = searchParams.get('survey')

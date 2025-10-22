@@ -62,7 +62,6 @@ export function buildZodShape(formDef: DynamicFormDef) {
             }
 
             if (field.required && field.type !== "checkbox") {
-                // чекбоксы чаще всего не обязательные; при надобности можно добавить required
                 zField = zField.refine((v: unknown) => v !== undefined && v !== "" && v !== null, {
                     message: "Обязательное поле",
                 });

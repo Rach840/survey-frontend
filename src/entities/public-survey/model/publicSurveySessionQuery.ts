@@ -1,7 +1,7 @@
 'use client'
 
 import {useQuery} from '@tanstack/react-query'
-import {getPublicSurveySession} from '../api/getPublicSurveySession'
+import {getPublicSurveySession} from '@/entities/public-survey'
 
 export const publicSurveySessionKey = (publicSlug: string | undefined) =>
   ['public-survey-session', publicSlug ?? ''] as const

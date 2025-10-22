@@ -11,26 +11,8 @@ import {Button} from '@/shared/ui/button'
 import {Skeleton} from '@/shared/ui/skeleton'
 import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
 import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
+import {dateTimeFormatter, enrollmentLabels, responseLabels} from "@/shared/lib";
 
-const enrollmentLabels: Record<string, string> = {
-  invited: 'Приглашён',
-  pending: 'Ожидает',
-  approved: 'Одобрен',
-  active: 'Активен',
-  rejected: 'Отклонён',
-  removed: 'Удалён',
-  expired: 'Истёк',
-}
-
-const responseLabels: Record<string, string> = {
-  in_progress: 'В процессе',
-  submitted: 'Завершено',
-}
-
-const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
 
 function formatDateTime(value?: string | null) {
   if (!value) return '—'
@@ -88,7 +70,7 @@ export  default  function SurveyParticipantPage({
 
   const participant = useMemo(() => {
     const items = data?.participants ?? data?.invitations ?? []
-    return items.find((item) => String(item.id) === participantId)
+    return items.find((item) => String(item.enrollment_id) === participantId)
   }, [data?.participants, data?.invitations, participantId])
 
   const answers = useMemo(() => getAnswerSections(participantId), [participantId])
@@ -174,7 +156,7 @@ export  default  function SurveyParticipantPage({
       >
       <Card className='border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
         <CardHeader className='border-b pb-6'>
-          <CardTitle className='text-2xl font-semibold text-gray-900'>{participant.fullName}</CardTitle>
+          <CardTitle className='text-2xl font-semibold text-gray-900'>{participant.full_name}</CardTitle>
           <CardDescription className='text-gray-600'>Карточка с данными анкеты и статусом прохождения.</CardDescription>
         </CardHeader>
         <CardContent className='grid gap-4 py-6 md:grid-cols-2'>

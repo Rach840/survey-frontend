@@ -7,7 +7,7 @@ import {ArrowLeft, Edit3, RefreshCcw} from 'lucide-react'
 
 import {useSurveyStatistics} from '@/entities/surveys/model/surveyStatisticsQuery'
 import {useSurveyUpdate} from '@/features/survey/update-survey'
-import type {SurveyMode, SurveyResult, SurveyStatus} from '@/entities/surveys/types'
+import type {SurveyMode, SurveyStatus} from '@/entities/surveys/types'
 import {Button} from '@/shared/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {
@@ -25,13 +25,18 @@ import {Skeleton} from '@/shared/ui/skeleton'
 import {fadeTransition, fadeUpVariants} from '@/shared/ui/page-transition'
 import {toast} from 'sonner'
 import ErrorFetch from "@/widgets/FetchError/ErrorFetch";
+import {
+  createMetrics,
+  defaultStats,
+  formatDateTime,
+  formatNumber,
+  normalizeFormSections,
+  readSurveyProp,
+  truncateToken
+} from "@/shared";
+import {EditFormState} from "@/shared/lib";
+import {statusLabels} from "@/entities/templates/types";
 
-const statusLabels: Record<SurveyStatus, string> = {
-  draft: 'Черновик',
-  open: 'Открыта',
-  closed: 'Закрыта',
-  archived: 'Архив',
-}
 
 const statusTone: Record<SurveyStatus, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -40,176 +45,10 @@ const statusTone: Record<SurveyStatus, string> = {
   archived: 'bg-slate-200 text-slate-700',
 }
 
-const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
-
-const numberFormatter = new Intl.NumberFormat('ru-RU')
-
 const fadeInitial = fadeUpVariants.hidden
 const fadeAnimate = fadeUpVariants.show
 
-type MetricCard = {
-  label: string
-  value: string
-  percentage?: number
-}
 
-type EditFormState = {
-  title: string
-  mode: SurveyMode
-  status: SurveyStatus
-  maxParticipants: string
-  publicSlug: string
-  startsAt: string
-  endsAt: string
-}
-
-type SnapshotField = {
-  code?: string
-  label?: string
-  title?: string
-  type?: string
-  required?: boolean
-}
-
-type SnapshotSection = {
-  code?: string
-  title?: string
-  repeatable?: boolean
-  fields: SnapshotField[]
-}
-
-const defaultStats = {
-  total_enrollments: 0,
-  responses_started: 0,
-  responses_submitted: 0,
-  responses_in_progress: 0,
-  completion_rate: 0,
-  overall_progress: 0,
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return '—'
-  try {
-    return dateTimeFormatter.format(new Date(value))
-  } catch {
-    return value
-  }
-}
-
-function formatNumber(value?: number | null) {
-  if (value === undefined || value === null || Number.isNaN(value)) return '0'
-  return numberFormatter.format(value)
-}
-
-function normalizePercentage(value?: number | null) {
-  if (value === undefined || value === null || Number.isNaN(value)) return 0
-  const scaled = value <= 1 ? value * 100 : value
-  return Math.max(0, Math.min(100, Math.round(scaled)))
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function coerceField(field: unknown): SnapshotField | null {
-  if (!isRecord(field)) return null
-  const code = typeof field['code'] === 'string' ? (field['code'] as string) : undefined
-  const label = typeof field['label'] === 'string' ? (field['label'] as string) : undefined
-  const title = typeof field['title'] === 'string' ? (field['title'] as string) : undefined
-  const type = typeof field['type'] === 'string' ? (field['type'] as string) : undefined
-  const required = field['required'] === true
-  return {
-    code,
-    label,
-    title,
-    type,
-    required,
-  }
-}
-
-function coerceSection(section: unknown): SnapshotSection | null {
-  if (!isRecord(section)) return null
-  const fieldsRaw = Array.isArray(section['fields']) ? (section['fields'] as unknown[]) : []
-  const fields = fieldsRaw.map(coerceField).filter(Boolean) as SnapshotField[]
-  return {
-    code: typeof section['code'] === 'string' ? (section['code'] as string) : undefined,
-    title: typeof section['title'] === 'string' ? (section['title'] as string) : undefined,
-    repeatable: section['repeatable'] === true,
-    fields,
-  }
-}
-
-function extractSections(sections: unknown[]): SnapshotSection[] {
-  return sections.map(coerceSection).filter(Boolean) as SnapshotSection[]
-}
-
-function normalizeFormSections(snapshot: SurveyResult['survey']['form_snapshot_json']): SnapshotSection[] {
-  if (!snapshot) return []
-
-  if (Array.isArray(snapshot)) {
-    return extractSections(snapshot)
-  }
-
-  if (typeof snapshot === 'string') {
-    try {
-      const parsed = JSON.parse(snapshot)
-      if (Array.isArray(parsed)) {
-        return extractSections(parsed)
-      }
-    } catch {
-      return []
-    }
-  }
-
-  if (isRecord(snapshot)) {
-    const published = snapshot['published_schema_json']
-    if (Array.isArray(published) && published.length) {
-      return extractSections(published)
-    }
-
-    const draft = snapshot['draft_schema_json']
-    if (Array.isArray(draft)) {
-      return extractSections(draft)
-    }
-  }
-
-  return []
-}
-
-function truncateToken(token?: string | null) {
-  if (!token) return '—'
-  if (token.length <= 22) return token
-  return `${token.slice(0, 12)}…${token.slice(-6)}`
-}
-
-function readSurveyProp<T = unknown>(survey: SurveyResult['survey'] | undefined, ...keys: string[]): T | undefined {
-  if (!survey) return undefined
-  const record = survey as unknown as Record<string, unknown>
-  for (const key of keys) {
-    if (key in record) {
-      return record[key] as T
-    }
-  }
-  return undefined
-}
-
-function createMetrics(result?: SurveyResult): MetricCard[] {
-  const stats = result?.statistics ?? defaultStats
-  const completion = normalizePercentage(stats.completion_rate)
-  const overall = normalizePercentage(stats.overall_progress)
-
-  return [
-    { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
-    { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
-    { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
-    { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
-    { label: 'Конверсия', value: `${completion}%`, percentage: completion },
-    { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
-  ]
-}
 
 export default function SurveyDetailPage({
   surveyId,
@@ -316,15 +155,15 @@ export default function SurveyDetailPage({
     const startsAtIso = parseDateTime(form.startsAt)
     const endsAtIso = parseDateTime(form.endsAt)
     const slug = form.publicSlug.trim()
-
+    console.log('dasdasdsad',startsAtIso,endsAtIso)
     const payload = {
       title,
       invitationMode: mode,
       status: form.status,
-      maxParticipants: maxParticipantsValue,
-      publicSlug: slug || null,
-      startsAt: startsAtIso,
-      endsAt: endsAtIso,
+      max_participants: maxParticipantsValue,
+      public_slug: slug || null,
+      starts_at: startsAtIso,
+      ends_at: endsAtIso,
     }
 
     try {
@@ -457,8 +296,8 @@ export default function SurveyDetailPage({
                         <SelectValue placeholder='Выберите статус' />
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(statusLabels) as SurveyStatus[]).map((status) => (
-                          <SelectItem key={status} value={status}>
+                        {(Object.keys(statusLabels) as SurveyStatus[]).map((status,key:number) => (
+                          <SelectItem key={key} value={status}>
                             {statusLabels[status]}
                           </SelectItem>
                         ))}
@@ -628,7 +467,6 @@ export default function SurveyDetailPage({
           <Card className='border-none bg-white/90 shadow-md ring-1 ring-slate-200/60 backdrop-blur-sm'>
             <CardHeader>
               <CardTitle>Структура анкеты</CardTitle>
-              <CardDescription>Актуальный снимок формы поможет синхронизировать изменения с бэкендом.</CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>
               {formSections.length === 0 ? (
@@ -654,7 +492,7 @@ export default function SurveyDetailPage({
                     </div>
                     {section.fields.length ? (
                       <ul className='mt-3 space-y-2'>
-                        {section.fields.map((field, fieldIndex) => {
+                        {section.fields.map((field, fieldIndex: number) => {
                           const fieldKey = field.code ?? field.title ?? field.label ?? `field-${fieldIndex}`
                           return (
                             <li key={fieldKey} className='rounded-lg bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/60'>

@@ -2,15 +2,21 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useMutation, useQueryClient} from '@tanstack/react-query'
-import {AlertCircle, CheckCircle2, RefreshCcw} from 'lucide-react'
+import {AlertCircle, CheckCircle2, Loader2, PlayCircle, RefreshCcw} from 'lucide-react'
 import {toast} from 'sonner'
 
-import {publicSurveySessionKey, submitPublicSurveyResponse, usePublicSurveySession,} from '@/entities/public-survey'
-import type {SurveySubmissionAnswer} from '@/entities/public-survey'
+import type {PublicSurveySession, SurveySubmissionAnswer} from '@/entities/public-survey'
+import {
+  publicSurveySessionKey,
+  startPublicSurveySession,
+  submitPublicSurveyResponse,
+  usePublicSurveySession,
+} from '@/entities/public-survey'
 import {sectionsToDynamicForm} from '@/entities/templates/lib/toDynamicForm'
-import type {TemplateField, TemplateSection} from '@/entities/templates/types'
-import type {EnrollmentState, ResponseState, SurveyStatus} from '@/entities/surveys/types'
+import {statusLabels} from '@/entities/templates/types'
 import {GeneratedForm} from '@/features/template/generated'
+import {buildSubmissionAnswers, clearDraft, readDraft, writeDraft} from '@/entities/surveys/lib'
+import {enrollmentLabels, responseLabels, formatDateTime} from '@/shared/lib'
 import {Button} from '@/shared/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/shared/ui/card'
 import {Skeleton} from '@/shared/ui/skeleton'
@@ -22,236 +28,10 @@ type SurveyPageProps = {
 const STORAGE_PREFIX = 'survey-response:v1:'
 const AUTOSAVE_DELAY = 600
 
-type DraftPayload = {
-  updatedAt: number
-  values: Record<string, unknown>
-}
 
-const enrollmentLabels: Partial<Record<EnrollmentState, string>> = {
-  invited: 'Приглашён',
-  pending: 'Ожидает',
-  approved: 'Одобрен',
-  active: 'Активен',
-  rejected: 'Отклонён',
-  expired: 'Просрочен',
-}
 
-const responseLabels: Partial<Record<ResponseState, string>> = {
-  in_progress: 'Черновик',
-  submitted: 'Отправлено',
-}
 
-const surveyStatusLabels: Partial<Record<SurveyStatus, string>> = {
-  draft: 'Черновик',
-  open: 'Открыта',
-  closed: 'Закрыта',
-  archived: 'Архивирована',
-}
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-type SubmissionAnswerValue = Partial<Omit<SurveySubmissionAnswer, 'question_code' | 'section_code' | 'repeat_path'>>
-
-function mapFieldValue(field: TemplateField, raw: unknown): SubmissionAnswerValue | null {
-  if (raw === undefined || raw === null) {
-    return null
-  }
-
-  const fieldType = field.type as TemplateField['type'] | 'checkbox'
-
-  if (typeof raw === 'string' && raw.trim().length === 0) {
-    return null
-  }
-
-  switch (fieldType) {
-    case 'number': {
-      if (typeof raw === 'number' && !Number.isNaN(raw)) {
-        return { value_number: raw }
-      }
-      if (typeof raw === 'string') {
-        const numeric = Number(raw)
-        if (!Number.isNaN(numeric)) {
-          return { value_number: numeric }
-        }
-      }
-      return null
-    }
-    case 'date': {
-      if (typeof raw === 'string') {
-        return { value_date: raw }
-      }
-      return null
-    }
-    case 'select_one':
-    case 'text': {
-      if (typeof raw === 'string') {
-        return { value_text: raw }
-      }
-      if (typeof raw === 'number' || typeof raw === 'boolean') {
-        return { value_text: String(raw) }
-      }
-      break
-    }
-    case 'select_multiple': {
-      if (Array.isArray(raw)) {
-        const filtered = raw.filter((item) => {
-          if (item === null || item === undefined) {
-            return false
-          }
-          if (typeof item === 'string') {
-            return item.trim().length > 0
-          }
-          return true
-        })
-        if (filtered.length === 0) {
-          return null
-        }
-        return { value_json: filtered }
-      }
-      if (typeof raw === 'string') {
-        return { value_json: [raw] }
-      }
-      if (isPlainRecord(raw)) {
-        const keys = Object.keys(raw)
-        if (keys.length === 0) {
-          return null
-        }
-        return { value_json: raw }
-      }
-      break
-    }
-    case 'checkbox': {
-      if (typeof raw === 'boolean') {
-        return { value_bool: raw }
-      }
-      if (raw === 0 || raw === 1) {
-        return { value_bool: Boolean(raw) }
-      }
-      return null
-    }
-    default:
-      break
-  }
-
-  if (typeof raw === 'boolean') {
-    return { value_bool: raw }
-  }
-  if (typeof raw === 'number') {
-    if (Number.isNaN(raw)) {
-      return null
-    }
-    return { value_number: raw }
-  }
-  if (typeof raw === 'string') {
-    return { value_text: raw }
-  }
-  if (Array.isArray(raw)) {
-    if (raw.length === 0) {
-      return null
-    }
-    return { value_json: raw }
-  }
-  if (isPlainRecord(raw)) {
-    const keys = Object.keys(raw)
-    if (keys.length === 0) {
-      return null
-    }
-    return { value_json: raw }
-  }
-
-  return null
-}
-
-function buildSubmissionAnswers(sections: TemplateSection[], values: Record<string, unknown>): SurveySubmissionAnswer[] {
-  const answers: SurveySubmissionAnswer[] = []
-
-  for (const section of sections) {
-    const sectionValue = values[section.code]
-
-    if (Array.isArray(sectionValue)) {
-      sectionValue.forEach((entry, index) => {
-        if (!isPlainRecord(entry)) {
-          return
-        }
-
-        section.fields.forEach((field) => {
-          const fieldValue = mapFieldValue(field, entry[field.code])
-          if (!fieldValue) {
-            return
-          }
-
-          answers.push({
-            question_code: field.code,
-            section_code: section.code,
-            repeat_path: `${section.code}:${index}`,
-            ...fieldValue,
-          })
-        })
-      })
-
-      continue
-    }
-
-    if (!isPlainRecord(sectionValue)) {
-      continue
-    }
-
-    section.fields.forEach((field) => {
-      const fieldValue = mapFieldValue(field, sectionValue[field.code])
-      if (!fieldValue) {
-        return
-      }
-
-      answers.push({
-        question_code: field.code,
-        section_code: section.code,
-        ...fieldValue,
-      })
-    })
-  }
-
-  return answers
-}
-
-function readDraft(key: string): DraftPayload | null {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as DraftPayload
-    if (!parsed || typeof parsed !== 'object' || typeof parsed.values !== 'object') {
-      return null
-    }
-    return {
-      updatedAt: Number(parsed.updatedAt) || Date.now(),
-      values: parsed.values,
-    }
-  } catch (error) {
-    console.warn('Failed to read survey draft', error)
-    return null
-  }
-}
-
-function writeDraft(key: string, values: Record<string, unknown>) {
-  try {
-    const payload: DraftPayload = {
-      updatedAt: Date.now(),
-      values,
-    }
-    localStorage.setItem(key, JSON.stringify(payload))
-  } catch (error) {
-    console.warn('Failed to persist survey draft', error)
-  }
-}
-
-function clearDraft(key: string) {
-  try {
-    localStorage.removeItem(key)
-  } catch (error) {
-    console.warn('Failed to clear survey draft', error)
-  }
-}
 
 export  default  function SurveyPage({token }: SurveyPageProps) {
   if (!token) {
@@ -270,16 +50,24 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
   const [initialValues, setInitialValues] = useState<Record<string, unknown> | undefined>()
   const autosaveTimer = useRef<number | null>(null)
 
-  const storageKey = useMemo(() => {
-    if (!data) return undefined
-    return `${STORAGE_PREFIX}${token}:${data.enrollment.id}`
-  }, [data, token])
+  const enrollmentState = data?.enrollment.state
+  const responseState = data?.response?.state
+  const hasResponse = Boolean(data?.response)
+  const isSubmitted = responseState === 'submitted'
+  const isExpired = enrollmentState === 'expired'
+  const hasStarted = hasResponse || enrollmentState === 'pending' || enrollmentState === 'active'
+  const shouldShowIntro = Boolean(data) && !isSubmitted && !isExpired && !hasStarted
 
-  const isSubmitted = data?.response?.state === 'submitted'
+  const storageKey = useMemo(() => {
+    if (!data || !hasStarted) return undefined
+    return `${STORAGE_PREFIX}${token}:${data.enrollment.id}`
+  }, [data, hasStarted, token])
+
+  const shouldShowForm = Boolean(data) && !isSubmitted && !isExpired && !shouldShowIntro
   const formSections = data?.survey.formSnapshot
 
   useEffect(() => {
-    if (!data || !storageKey) {
+    if (!data || !storageKey || !shouldShowForm) {
       setInitialValues(undefined)
       return
     }
@@ -292,7 +80,7 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
     const draft = readDraft(storageKey)
     const merged = draft?.values ? { ...answersFromServer, ...draft.values } : answersFromServer
     setInitialValues(Object.keys(merged).length > 0 ? merged : undefined)
-  }, [data, storageKey])
+  }, [data, shouldShowForm, storageKey])
 
   useEffect(() => {
     if (!storageKey || !isSubmitted) return
@@ -307,6 +95,27 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
     }
   }, [])
 
+  const startMutation = useMutation({
+    mutationFn: () => startPublicSurveySession({
+      token,
+      channel: 'general',
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: publicSurveySessionKey(token),
+      })
+      toast.success('Анкетирование начато')
+    },
+    onError: () => {
+      toast.error('Не удалось начать анкетирование. Попробуйте ещё раз.')
+    },
+  })
+
+  const handleStart = useCallback(() => {
+    if (startMutation.isPending) return
+    startMutation.mutate()
+  }, [startMutation])
+
   const mutation = useMutation({
     mutationFn: async (answers: SurveySubmissionAnswer[]) => {
       return submitPublicSurveyResponse({
@@ -320,9 +129,9 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
         clearDraft(storageKey)
       }
       await queryClient.invalidateQueries({
-        queryKey: publicSurveySessionKey( token),
+        queryKey: publicSurveySessionKey(token),
       })
-      toast.success('Ответы отправлены')
+      toast.success('Анкета успешно завершена')
     },
     onError: () => {
       toast.error('Не удалось отправить ответы. Попробуйте ещё раз.')
@@ -336,6 +145,11 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
         return
       }
 
+      if (!shouldShowForm) {
+        toast.error('Анкетирование ещё не начато. Нажмите «Начать анкетирование».')
+        return
+      }
+
       if (!formSections) {
         toast.error('Не удалось определить структуру анкеты.')
         return
@@ -344,7 +158,7 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
       const answers = buildSubmissionAnswers(formSections, values)
       await mutation.mutateAsync(answers)
     },
-    [formSections, isSubmitted, mutation],
+    [formSections, isSubmitted, mutation, shouldShowForm],
   )
 
   const handleChange = useCallback(
@@ -404,6 +218,28 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
     )
   }
 
+  if (!data) {
+    return null
+  }
+
+  if (isExpired) {
+    return <SurveyExpiredNotice session={data} onRetry={() => refetch()} />
+  }
+
+  if (isSubmitted) {
+    return <SurveyCompletionScreen session={data} onReload={() => refetch()} />
+  }
+
+  if (shouldShowIntro) {
+    return (
+      <SurveyStartScreen
+        session={data}
+        onStart={handleStart}
+        isStarting={startMutation.isPending}
+      />
+    )
+  }
+
   return (
     <div className='min-h-screen bg-slate-50 px-4 py-12'>
       <div className='mx-auto flex max-w-3xl flex-col gap-6'>
@@ -427,7 +263,7 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
             <div>
               <p className='text-xs uppercase text-gray-500'>Статус анкеты</p>
               <p className='text-sm font-medium text-gray-900'>
-                {surveyStatusLabels[data.survey.status] ?? data.survey.status}
+                {statusLabels[data.survey.status] ?? data.survey.status}
               </p>
               {data.response?.state ? (
                 <p className='text-xs text-gray-500'>
@@ -435,12 +271,6 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
                 </p>
               ) : null}
             </div>
-            {isSubmitted ? (
-              <div className='col-span-full flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700'>
-                <CheckCircle2 className='h-4 w-4 flex-shrink-0' />
-                Ответ уже отправлен. Вы можете просмотреть его ниже.
-              </div>
-            ) : null}
           </CardContent>
         </Card>
 
@@ -450,11 +280,11 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
             initialValues={initialValues}
             onSubmit={handleSubmit}
             onChange={handleChange}
-            submitLabel={isSubmitted ? 'Ответ уже отправлен' : 'Отправить ответы'}
+            submitLabel='Завершить анкету'
             submittingLabel='Отправляем...'
-            hideResetButton={isSubmitted}
+            hideResetButton={false}
             isSubmitting={mutation.isPending}
-            isReadOnly={isSubmitted}
+            isReadOnly={false}
             showSubmissionPreview={false}
           />
         ) : (
@@ -468,6 +298,156 @@ function SurveyPageContent({  token }: SurveyPageContentProps) {
           </Card>
         )}
       </div>
+    </div>
+  )
+}
+
+type SurveyStartScreenProps = {
+  session: PublicSurveySession
+  onStart: () => void
+  isStarting: boolean
+}
+
+function SurveyStartScreen({ session, onStart, isStarting }: SurveyStartScreenProps) {
+  const { survey, enrollment } = session
+  const contact = enrollment.email ?? enrollment.phone ?? '—'
+  const closesAt = survey.endsAt ? formatDateTime(survey.endsAt) : null
+
+  return (
+    <div className='flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12'>
+      <Card className='w-full max-w-2xl border-none bg-white/90 shadow-lg ring-1 ring-slate-200/60 backdrop-blur-sm'>
+        <CardHeader className='space-y-4'>
+          <div className='flex items-start gap-3'>
+            <div className='rounded-full bg-indigo-100 p-2 text-indigo-600'>
+              <PlayCircle className='h-5 w-5' />
+            </div>
+            <div>
+              <CardTitle className='text-2xl font-semibold text-gray-900'>{survey.title}</CardTitle>
+              <CardDescription className='text-gray-600'>
+                {survey.description || 'Проверьте данные и начните прохождение анкеты.'}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className='space-y-6'>
+          <div className='grid gap-4 text-sm text-gray-700 sm:grid-cols-2'>
+            <div>
+              <p className='text-xs uppercase text-gray-500'>Участник</p>
+              <p className='mt-1 font-medium text-gray-900'>{enrollment.fullName}</p>
+              {enrollment.state ? (
+                <p className='text-xs text-gray-500'>
+                  {enrollmentLabels[enrollment.state] ?? enrollment.state}
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <p className='text-xs uppercase text-gray-500'>Контакты</p>
+              <p className='mt-1 font-medium text-gray-900'>{contact}</p>
+              {enrollment.email && enrollment.phone ? (
+                <p className='text-xs text-gray-500'>{enrollment.phone}</p>
+              ) : null}
+            </div>
+            <div>
+              <p className='text-xs uppercase text-gray-500'>Статус анкеты</p>
+              <p className='mt-1 font-medium text-gray-900'>
+                {statusLabels[survey.status] ?? survey.status}
+              </p>
+              <p className='text-xs text-gray-500'>
+                Формат: {survey.mode === 'bot' ? 'Через бота' : 'Администратор'}
+              </p>
+            </div>
+            {closesAt ? (
+              <div>
+                <p className='text-xs uppercase text-gray-500'>Доступно до</p>
+                <p className='mt-1 font-medium text-gray-900'>{closesAt}</p>
+                <p className='text-xs text-gray-500'>После этого ответы могут не приниматься.</p>
+              </div>
+            ) : null}
+          </div>
+          <div className='space-y-2'>
+            <Button
+              className='w-full gap-2 text-base font-medium'
+              size='lg'
+              onClick={onStart}
+              disabled={isStarting}
+            >
+              {isStarting ? <Loader2 className='h-4 w-4 animate-spin' /> : <PlayCircle className='h-4 w-4' />}
+              {isStarting ? 'Запускаем...' : 'Начать анкетирование'}
+            </Button>
+            <p className='text-center text-xs text-gray-500'>
+              Нажимая кнопку, вы подтверждаете, что данные участника корректны и готовы к отправке.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+type SurveyExpiredNoticeProps = {
+  session: PublicSurveySession
+  onRetry: () => void
+}
+
+function SurveyExpiredNotice({ session, onRetry }: SurveyExpiredNoticeProps) {
+  const expiresAt = session.survey.endsAt ? formatDateTime(session.survey.endsAt) : null
+
+  return (
+    <div className='flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12'>
+      <Card className='w-full max-w-xl border-red-200 bg-red-50 shadow-lg ring-1 ring-red-200/60'>
+        <CardHeader className='flex items-start gap-3'>
+          <AlertCircle className='h-6 w-6 text-red-500' />
+          <div>
+            <CardTitle className='text-lg font-semibold text-red-700'>Приглашение недействительно</CardTitle>
+            <CardDescription className='text-sm text-red-600'>
+              {session.enrollment.fullName}, срок действия вашего приглашения истёк
+              {expiresAt && expiresAt !== '—' ? ` ${expiresAt}.` : '.'} Обратитесь к организатору за новой ссылкой.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className='flex flex-col gap-3 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between'>
+          <span className='text-xs sm:max-w-[60%]'>Если вы считаете, что это ошибка, обновите страницу или запросите повторное приглашение.</span>
+          <Button variant='outline' className='gap-2' onClick={onRetry}>
+            <RefreshCcw className='h-4 w-4' />
+            Обновить
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+type SurveyCompletionScreenProps = {
+  session: PublicSurveySession
+  onReload: () => void
+}
+
+function SurveyCompletionScreen({ session, onReload }: SurveyCompletionScreenProps) {
+  const submittedAt = session.response?.submittedAt ? formatDateTime(session.response.submittedAt) : null
+
+  return (
+    <div className='flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12'>
+      <Card className='w-full max-w-2xl border-none bg-white/90 shadow-lg ring-1 ring-emerald-200/70 backdrop-blur-sm'>
+        <CardHeader className='flex flex-col items-center gap-3 text-center'>
+          <div className='rounded-full bg-emerald-100 p-3 text-emerald-600'>
+            <CheckCircle2 className='h-6 w-6' />
+          </div>
+          <CardTitle className='text-2xl font-semibold text-gray-900'>Анкета пройдена</CardTitle>
+          <CardDescription className='text-gray-600'>
+            Спасибо, {session.enrollment.fullName}! Ваши ответы отправлены организатору
+            {submittedAt && submittedAt !== '—' ? ` ${submittedAt}.` : '.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='space-y-4 text-sm text-gray-600'>
+          <p>
+            Сохраните подтверждение о прохождении или закройте страницу. При необходимости вы можете обновить данные, чтобы повторно загрузить ответы.
+          </p>
+          <Button variant='outline' className='w-full gap-2 sm:w-auto' onClick={onReload}>
+            <RefreshCcw className='h-4 w-4' />
+            Обновить данные
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

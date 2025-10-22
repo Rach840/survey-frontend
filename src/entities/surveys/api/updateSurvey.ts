@@ -1,10 +1,11 @@
-import { apiFetch } from '@/shared'
-import type { SurveyDetail, UpdateSurveyPayload } from '../types'
+import {apiFetch} from '@/shared'
+import type {SurveyDetail, UpdateSurveyPayload} from '../types'
 
 export async function updateSurvey(
   id: string,
   payload: UpdateSurveyPayload,
 ): Promise<SurveyDetail> {
+  console.log(payload)
   const response = await apiFetch(`/api/survey/${id}`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },

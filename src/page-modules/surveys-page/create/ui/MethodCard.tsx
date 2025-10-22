@@ -119,8 +119,8 @@ export function MethodCard({ form, maxParticipants, participants, setParticipant
         })),
       )
       const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Participants')
-      XLSX.writeFile(workbook, 'participants-template.xlsx')
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Участники')
+      XLSX.writeFile(workbook, 'список участников.xlsx')
     } catch (error) {
       console.error('participants export failed', error)
       toast.error('Не удалось сформировать файл-шаблон')

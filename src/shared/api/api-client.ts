@@ -40,9 +40,9 @@ function shouldUseCache(input: RequestInfo, init: RequestInit) {
     if (method !== 'GET') return false
 
     const headers = headersAsRecord(init.headers)
-    if (headers.get(CACHE_BYPASS_HEADER) === 'true') return false
+    return headers.get(CACHE_BYPASS_HEADER) !== 'true';
 
-    return true
+
 }
 
 function readCacheTTL(init: RequestInit) {

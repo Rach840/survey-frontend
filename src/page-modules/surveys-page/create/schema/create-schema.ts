@@ -41,6 +41,5 @@ export const surveySchema = z
         }
     );
 
-export type SurveyValues = z.infer<typeof surveySchema>;
 export type SurveyInput  = z.input<typeof surveySchema>;   // status?, invitationMode?
 export type SurveyOutput = z.output<typeof surveySchema>;

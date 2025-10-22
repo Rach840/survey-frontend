@@ -99,7 +99,7 @@ function CopyButton({
       data-slot="copy-button"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className={cn(buttonVariants({ variant, size }), className)}
+      className={cn(buttonVariants({ variant, size }), className,     "h-[50px] w-[100px]")}
       onClick={handleCopy}
       {...props}
     >
@@ -110,9 +110,11 @@ function CopyButton({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           exit={{ scale: 0 }}
+
           transition={{ duration: 0.15 }}
         >
-          <Icon />
+          <Icon className={'mx-auto'} />
+            {localIsCopied ? "Скопировано!" : "Скопировать"}
         </motion.span>
       </AnimatePresence>
     </motion.button>

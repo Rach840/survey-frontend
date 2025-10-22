@@ -122,6 +122,7 @@ type FontDefinition = {
 }
 
 const PDF_FONT_NAME = 'LiberationSans'
+const PDF_FONT_ALIASES = [PDF_FONT_NAME, 'Liberation Sans']
 
 const FONT_DEFINITIONS: FontDefinition[] = [
   {
@@ -194,7 +195,10 @@ export async function ensureCyrillicFont(doc: JsPdfInstance): Promise<string> {
 
   fonts.forEach(({ definition, data }) => {
     doc.addFileToVFS(definition.vfsName, data)
-    doc.addFont(definition.vfsName, definition.fontName, definition.fontStyle)
+    const aliases = new Set([...PDF_FONT_ALIASES, definition.fontName])
+    aliases.forEach((fontName) => {
+      doc.addFont(definition.vfsName, fontName, definition.fontStyle)
+    })
   })
 
   doc.setFont(PDF_FONT_NAME, 'normal')
@@ -208,7 +212,10 @@ export async function getPdfFontCss(): Promise<string> {
     .map(({ definition, data }) => {
       const weight = definition.fontStyle === 'bold' ? 700 : 400
       const format = definition.vfsName.endsWith('.ttf') ? 'truetype' : 'opentype'
-      return `@font-face { font-family: '${definition.fontName}'; font-style: normal; font-weight: ${weight}; font-display: swap; src: url('data:font/${format};base64,${data}') format('${format}'); }`
+      const families = new Set([...PDF_FONT_ALIASES, definition.fontName])
+      return Array.from(families)
+        .map((family) => `@font-face { font-family: '${family}'; font-style: normal; font-weight: ${weight}; font-display: swap; src: url('data:font/${format};base64,${data}') format('${format}'); }`)
+        .join('\n')
     })
     .join('\n')
 }

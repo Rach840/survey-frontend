@@ -57,7 +57,7 @@ function CodeTabsContent({
         const newHighlightedCodes: Record<string, string> = {};
 
         for (const [command, val] of Object.entries(codes)) {
-          const highlighted = await codeToHtml(val, {
+          newHighlightedCodes[command] =  await codeToHtml(val, {
             lang,
             themes: {
               light: themes.light,
@@ -65,8 +65,6 @@ function CodeTabsContent({
             },
             defaultColor: resolvedTheme === 'dark' ? 'dark' : 'light',
           });
-
-          newHighlightedCodes[command] = highlighted;
         }
 
         setHighlightedCodes(newHighlightedCodes);
