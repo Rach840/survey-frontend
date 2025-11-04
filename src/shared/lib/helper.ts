@@ -1,5 +1,5 @@
 import {TemplateField, TemplateSection} from "@/entities/templates/types";
-import {SurveyResult, SurveyResultsStatistics} from "@/entities/surveys/types";
+import {SurveyResult} from "@/entities/surveys/types";
 import {SnapshotField, SnapshotSection} from "@/shared/lib";
 import {isPlainRecord} from "@/shared";
 
@@ -18,34 +18,6 @@ export const defaultStats = {
 }
 
 
-export function createMetrics(result?: SurveyResult): MetricCard[] {
-    const stats = result?.statistics ?? defaultStats
-    const completion = normalizePercentage(stats.completion_rate)
-    const overall = normalizePercentage(stats.overall_progress)
-
-    return [
-        { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
-        { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
-        { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
-        { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
-        { label: 'Конверсия', value: `${completion}%`, percentage: completion },
-        { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
-    ]
-}
-
-export function mapMetrics(stats: SurveyResultsStatistics | undefined): MetricCard[] {
-    if (!stats) return []
-    const completion = normalizePercentage(stats.completion_rate)
-    const overall = normalizePercentage(stats.overall_progress)
-    return [
-        { label: 'Всего приглашений', value: formatNumber(stats.total_enrollments) },
-        { label: 'Начали заполнение', value: formatNumber(stats.responses_started) },
-        { label: 'В процессе', value: formatNumber(stats.responses_in_progress) },
-        { label: 'Завершили', value: formatNumber(stats.responses_submitted) },
-        { label: 'Конверсия', value: `${completion}%`, percentage: completion },
-        { label: 'Общий прогресс', value: `${overall}%`, percentage: overall },
-    ]
-}
 
 export  function helper(snapshot: unknown, ): TemplateSection[] {
     if (!snapshot) return []

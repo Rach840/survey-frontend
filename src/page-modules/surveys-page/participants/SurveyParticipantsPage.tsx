@@ -118,11 +118,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
     },
   })
 
-  const handleOpenExtend = (participant: SurveyParticipant) => {
-    const nextDefault = computeExtensionDate(getParticipantTokenExpiry(participant), DEFAULT_EXTENSION_DAYS)
-    setExtendValue(toLocalInputValue(nextDefault))
-    setExtendTarget(participant)
-  }
+
 
   const handleQuickExtend = (days: number) => {
     if (!extendTarget) return
@@ -214,7 +210,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Участники')
       XLSX.writeFile(workbook, `анкета-${surveyId}-участники.xlsx`)
     } catch (error) {
-      console.error('participants export error', error)
+      console.error('participants export-survey error', error)
       toast.error('Не удалось сформировать файл')
     }
   }
@@ -341,15 +337,15 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
                           <div className='text-sm font-medium text-gray-900'>{formatDateTime(getParticipantTokenExpiry(participant))}</div>
 
                           <div className="flex space-x-2 items-center">
-                            <Button
-                                size='sm'
-                                variant='outline'
-                                className=''
-                                onClick={() => handleOpenExtend(participant)}
-                                disabled={extendMutation.isPending}
-                            >
-                              Продлить
-                            </Button>
+                            {/*<Button*/}
+                            {/*    size='sm'*/}
+                            {/*    variant='outline'*/}
+                            {/*    className=''*/}
+                            {/*    onClick={() => handleOpenExtend(participant)}*/}
+                            {/*    disabled={extendMutation.isPending}*/}
+                            {/*>*/}
+                            {/*  Продлить*/}
+                            {/*</Button>*/}
                             <Button
                                 size='icon'
                                 variant='ghost'

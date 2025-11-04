@@ -89,13 +89,13 @@ export default function SurveyResultDetailPage({
       const windowWidth = Math.min(baseWindowWidth, 800)
       const filename = `survey-${surveyId}-participant-${enrollment.id}.pdf`
 
-      originalDataAttr = content.getAttribute('data-pdf-export')
+      originalDataAttr = content.getAttribute('data-pdf-export-survey')
       originalFontFamily = content.style.fontFamily
       originalFontSize = content.style.fontSize
       originalLineHeight = content.style.lineHeight
       originalMaxWidth = content.style.maxWidth
       originalMargin = content.style.margin
-      content.setAttribute('data-pdf-export', 'true')
+      content.setAttribute('data-pdf-export-survey', 'true')
       content.style.fontFamily = pdfFontFamily
       content.style.fontSize = '0.95rem'
       content.style.lineHeight = '1.5'
@@ -112,7 +112,7 @@ export default function SurveyResultDetailPage({
           useCORS: true,
           backgroundColor: '#ffffff',
           onclone: (docClone) => {
-            docClone.documentElement.setAttribute('data-pdf-export', 'true')
+            docClone.documentElement.setAttribute('data-pdf-export-survey', 'true')
             docClone.documentElement.style.fontSize = '15px'
             const style = docClone.createElement('style')
             style.setAttribute('data-pdf-fonts', 'true')
@@ -122,7 +122,7 @@ export default function SurveyResultDetailPage({
             docClone.body.style.fontSize = '0.95rem'
             docClone.body.style.lineHeight = '1.5'
 
-            const exportRoot = docClone.querySelector<HTMLElement>('[data-pdf-export="true"]')
+            const exportRoot = docClone.querySelector<HTMLElement>('[data-pdf-export-survey="true"]')
             if (exportRoot) {
               exportRoot.style.maxWidth = '960px'
               exportRoot.style.margin = '0 auto'
@@ -136,14 +136,14 @@ export default function SurveyResultDetailPage({
       doc.save(filename)
       toast.success('PDF сформирован')
     } catch (error) {
-      console.error('survey participant export error', error)
+      console.error('survey participant export-survey error', error)
       toast.error('Не удалось сформировать PDF')
     } finally {
       if (content) {
         if (originalDataAttr === null) {
-          content.removeAttribute('data-pdf-export')
+          content.removeAttribute('data-pdf-export-survey')
         } else {
-          content.setAttribute('data-pdf-export', originalDataAttr)
+          content.setAttribute('data-pdf-export-survey', originalDataAttr)
         }
         content.style.fontFamily = originalFontFamily
         content.style.fontSize = originalFontSize

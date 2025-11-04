@@ -45,7 +45,7 @@ export async function GET(
       return error
     }
 
-    console.error('Failed to export participant result', error)
-    return new Response('Failed to export participant result', { status: 500 })
+    console.error('Failed to export-survey participant result', error)
+    return new Response('Failed to export-survey participant result', { status: 500 })
   }
 }

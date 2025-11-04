@@ -16,7 +16,6 @@ import {
 } from '@/shared'
 import {Bot, Download, Plus, Trash2, Upload, Users} from 'lucide-react'
 import {SurveyInput, SurveyOutput} from '@/pages/surveys-page/create/schema/create-schema'
-import {RHFContext} from '@/pages/surveys-page/create/ui/CreatePage'
 import {loadXlsx} from '@/shared/lib/loadXlsx'
 
 export interface Participant {
@@ -26,7 +25,7 @@ export interface Participant {
   lastName: string
 }
 interface MethodCardProps {
-  form: UseFormReturn<SurveyInput, RHFContext, SurveyOutput>
+  form: UseFormReturn<SurveyInput, Record<string, never>, SurveyOutput>
   participants: Participant[]
   maxParticipants: number
   setParticipants: React.Dispatch<React.SetStateAction<Participant[]>>
@@ -122,7 +121,7 @@ export function MethodCard({ form, maxParticipants, participants, setParticipant
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Участники')
       XLSX.writeFile(workbook, 'список участников.xlsx')
     } catch (error) {
-      console.error('participants export failed', error)
+      console.error('participants export-survey failed', error)
       toast.error('Не удалось сформировать файл-шаблон')
     }
   }

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ sur
       return error
     }
 
-    console.error('Failed to export survey results', error)
-    return new Response('Failed to export survey results', { status: 500 })
+    console.error('Failed to export-survey survey results', error)
+    return new Response('Failed to export-survey survey results', { status: 500 })
   }
 }

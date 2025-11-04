@@ -31,14 +31,14 @@ function slugify(value: string) {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '')
 }
-export type RHFContext = Record<string, never>;
+
 export default function CreateSurveyPage() {
     const [participants, setParticipants] = useState<Participant[]>([])
     const [maxParticipants, setMaxParticipants] = useState(10)
     const { data: templatesData, isLoading } = useTemplatesByMe()
     const templates = templatesData ?? []
     const { mutateAsync, isPending } = useSurveyCreate()
-    const createForm = useForm<SurveyInput, RHFContext, SurveyOutput>({
+    const createForm = useForm<SurveyInput, Record<string, never>, SurveyOutput>({
         resolver: zodResolver(surveySchema),
         defaultValues:{
             invitationMode: "admin",

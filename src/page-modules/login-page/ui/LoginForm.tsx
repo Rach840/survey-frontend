@@ -23,7 +23,6 @@ export default  function LoginForm() {
         <div className="max-w-md mx-auto">
             <Card className="bg-[#ffffff] rounded-3xl shadow-xl border-0">
                 <CardHeader className="items-center justify-center text-center pb-2">
-                    {/* Icon */}
                     <div className="w-16 h-16  mx-auto bg-gradient-to-br from-[#6366f1] to-[#a855f7] rounded-2xl flex items-center justify-center mb-4">
                         <Image
                             src="/logo.svg"
@@ -38,7 +37,6 @@ export default  function LoginForm() {
                 </CardHeader>
                 <CardContent>
                     <form action={()=> mutate(loginForm.getValues())} id="form-reg" className=" space-y-6">
-                        {/* Email/Login field */}
                         <FieldGroup className={""}>
                             <Controller
                                 name="email"
@@ -87,9 +85,9 @@ export default  function LoginForm() {
                                 )}
                             />
                         </FieldGroup>
-                        {/* Register link */}
+
                         <p className="text-center text-sm text-[#6b7280]">
-                            Есть аккаунт? {" "}
+                            Нету аккаунта? {" "}
                             <Link href="/login" className="text-[#2563eb] hover:text-[#1d4ed8] font-medium transition-colors">
                                 Войти
                             </Link>
@@ -98,7 +96,6 @@ export default  function LoginForm() {
                 </CardContent>
                 <CardFooter>
                     <Field orientation="horizontal">
-
                         <Button variant={"form"} type="submit" form="form-reg">
                             Войти
                         </Button>
