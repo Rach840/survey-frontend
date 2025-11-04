@@ -60,7 +60,7 @@ export function useResultExcelExport(survey: Survey,allResults: SurveyResultsIte
         } finally {
             setIsExporting(false)
         }
-    }, [allResults, fieldColumns, survey.id])
+    }, [allResults, fieldColumns, survey?.id])
 
 
 }

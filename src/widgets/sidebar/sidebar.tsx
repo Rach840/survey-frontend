@@ -14,7 +14,6 @@ import {ChevronUp, User2} from "lucide-react";
 import {items} from "@/widgets/sidebar/links";
 import Image from 'next/image'
 import {useMeQuery} from "@/entities/user/model/meQuery";
-import {Button} from "@/shared";
 import {useSignOut} from "@/features/auth/sign-out/model";
 
 export function AppSidebar() {
@@ -57,7 +56,7 @@ export function AppSidebar() {
                 <SidebarFooter>
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <DropdownMenu>
+                            <DropdownMenu >
                                 <DropdownMenuTrigger asChild>
                                     <SidebarMenuButton size='lg' className='text-xl'>
                                         <User2 className='!size-8' /> {isLoading ? "Загрузка" : user?.full_name}
@@ -66,14 +65,12 @@ export function AppSidebar() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                     side="top"
-                                    className="w-full"
+                                    className="w-[235px]"
                                 >
 
-                                    <DropdownMenuItem>
-                                        <Button onClick={() => signOut()}>
-                                            <span>Выйти</span>
-                                        </Button>
+                                    <DropdownMenuItem className={"cursor-pointer w-full text-lg"}  onClick={() => signOut()}>
 
+                                        <span>Выйти</span>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

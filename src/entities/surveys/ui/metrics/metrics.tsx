@@ -1,6 +1,6 @@
 import {useMemo} from "react";
 import {defaultStats, formatNumber, MetricCard, normalizePercentage} from "@/shared";
-import {SurveyResult} from "@/entities/surveys/types";
+import {SurveyResult, SurveyResultsStatistics} from "@/entities/surveys/types";
 
 export function Metrics({stats,nextExpirationDisplay,expiringSoon}: {stats:SurveyResult,nextExpirationDisplay?:string,expiringSoon?: number  }) {
     const metrics = useMemo(() => createMetrics(stats), [stats])
@@ -48,8 +48,10 @@ export function Metrics({stats,nextExpirationDisplay,expiringSoon}: {stats:Surve
 
 }
 
-export function createMetrics(result?: SurveyResult): MetricCard[] {
-    const stats = result?.statistics ?? defaultStats
+export function createMetrics(result?: SurveyResult | SurveyResultsStatistics): MetricCard[] {
+    console.log(result)
+
+    const stats = result?.statistics || result || defaultStats
     const overall = normalizePercentage(stats.overall_progress)
 
     return [

@@ -129,7 +129,7 @@ const handleExport = useResultExcelExport(survey, allResults, setIsExporting)
           <CardHeader className='border-b pb-6'>
             <CardTitle className='text-2xl font-semibold text-gray-900'>{survey.title}</CardTitle>
             <CardDescription className='text-gray-600'>
-              Создана {formatDateTime(survey.created_at)} · Всего приглашений {formatNumber(stats.total_enrollments)}
+              Создана {formatDateTime(survey.created_at)} Всего приглашений {formatNumber(stats.total_enrollments)}
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-6 py-6'>
