@@ -40,7 +40,7 @@ export default function TemplatesPage() {
           <h1 className="mb-2 text-3xl font-bold text-gray-900">Шаблоны анкет</h1>
           <p className="text-gray-600">Создавайте и управляйте шаблонами для анкет</p>
         </div>
-        <Link href="/admin/templates/create">
+        <Link href="/(private)/questioner/templates/create">
           <Button className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]">
             <Plus className="mr-2 h-4 w-4" />
             Создать шаблон
@@ -76,12 +76,12 @@ export default function TemplatesPage() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex gap-2">
-                    <Link href={`/admin/templates/${template.id}/edit`} className="flex-1">
+                    <Link href={`/questioner/templates/${template.id}/edit`} className="flex-1">
                       <Button variant="secondary" className="w-full bg-transparent">
                         Редактировать
                       </Button>
                     </Link>
-                    <Link href={`/admin/templates/${template.id}`} className="flex-1">
+                    <Link href={`/questioner/templates/${template.id}`} className="flex-1">
                       <Button className="w-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]">
                         Открыть
                       </Button>

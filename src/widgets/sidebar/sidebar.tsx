@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui/sidebar";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/shared/ui/dropdown-menu";
 import {ChevronUp, User2} from "lucide-react";
-import {items} from "@/widgets/sidebar/links";
+import {itemsAdmin, itemsQuestioner} from "@/widgets/sidebar/links";
 import Image from 'next/image'
 import {useMeQuery} from "@/entities/user/model/meQuery";
 import {useSignOut} from "@/features/auth/sign-out/model";
@@ -19,6 +19,7 @@ import {useSignOut} from "@/features/auth/sign-out/model";
 export function AppSidebar() {
     const { data: user, isLoading } = useMeQuery()
     const {mutate: signOut} = useSignOut()
+    console.log(user)
     return (
             <Sidebar>
                 <SidebarHeader >
@@ -39,7 +40,16 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <SidebarGroupContent>
                             <SidebarMenu>
-                                {items.map((item) => (
+                                {user?.role == "ADMIN" ? itemsAdmin.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton size="lg" className='text-xl' asChild>
+                                            <a href={item.url}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </a>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                )) : itemsQuestioner.map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton size="lg" className='text-xl' asChild>
                                             <a href={item.url}>

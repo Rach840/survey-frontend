@@ -41,7 +41,7 @@ export default function CreateSurveyPage() {
     const createForm = useForm<SurveyInput, Record<string, never>, SurveyOutput>({
         resolver: zodResolver(surveySchema),
         defaultValues:{
-            invitationMode: "admin",
+            invitationMode: "questioner",
             max_participants: 10,
             status: "draft",
             title: "",
@@ -77,10 +77,10 @@ export default function CreateSurveyPage() {
         })
         createForm.setValue("participants", participantsPayload)
         createForm.setValue('public_slug', slugify(createForm.getValues('public_slug')))
-        createForm.setValue('max_participants',createForm.getValues("invitationMode") === "admin"
+        createForm.setValue('max_participants',createForm.getValues("invitationMode") === "questioner"
             ? participantsPayload.length > 0 ? participantsPayload.length : 10
             : Math.max(1, maxParticipants))
-        if (createForm.getValues("invitationMode") === "admin" && participantsPayload.length === 0) {
+        if (createForm.getValues("invitationMode") === "questioner" && participantsPayload.length === 0) {
             toast.error("Добавьте хотя бы одного участника")
             return
         }
@@ -128,7 +128,7 @@ export default function CreateSurveyPage() {
                 transition={fadeTransition}
             >
             <div>
-                <Link href="/admin/surveys">
+                <Link href="/(private)/questioner/surveys">
                     <Button variant="ghost" className="mb-4">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Назад к анкетам
@@ -302,7 +302,7 @@ export default function CreateSurveyPage() {
                 variants={fadeUpVariants}
                 transition={{ ...fadeTransition, delay: 0.15 }}
             >
-                <Link href="/admin/surveys">
+                <Link href="/(private)/questioner/surveys">
                     <Button variant="outline">Отмена</Button>
                 </Link>
                 <Button

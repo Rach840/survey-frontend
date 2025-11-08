@@ -77,25 +77,25 @@ export default function SurveyCard({ data }: { data: SurveyWithStatistic }) {
         </div>
 
         <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-          <Link href={`/admin/survey/${survey.id}`}>
+          <Link href={`/questioner/survey/${survey.id}`}>
             <Button variant='outline' className='w-full gap-2 transition-transform hover:-translate-y-0.5'>
               <BarChart3 className='h-4 w-4' />
               Статистика
             </Button>
           </Link>
-          <Link href={`/admin/survey/${survey.id}?edit=true`}>
+          <Link href={`/questioner/survey/${survey.id}?edit=true`}>
             <Button variant='outline' className='w-full gap-2 transition-transform hover:-translate-y-0.5'>
               <Pencil className='h-4 w-4' />
               Редактировать
             </Button>
           </Link>
-          <Link href={`/admin/survey/${survey.id}/results`}>
+          <Link href={`/questioner/survey/${survey.id}/results`}>
             <Button variant='outline' className='w-full gap-2 transition-transform hover:-translate-y-0.5'>
               <FileSpreadsheet className='h-4 w-4' />
               Результаты
             </Button>
           </Link>
-          <Link href={`/admin/survey/${survey.id}/participants`}>
+          <Link href={`/questioner/survey/${survey.id}/participants`}>
             <Button variant='outline' className='w-full gap-2 transition-transform hover:-translate-y-0.5'>
 
               Участники

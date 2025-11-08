@@ -14,7 +14,7 @@ export type EnrollmentCreatePayload = {
 export type CreateSurveyPayload = {
   template_id: number
   title: string
-  invitationMode: 'admin' | 'bot'
+  invitationMode: 'questioner' | 'bot'
   status: SurveyStatus
   participants: EnrollmentCreatePayload[]
   max_participants?: number
@@ -42,7 +42,7 @@ export function useSurveyCreate() {
     },
     onSuccess: () => {
       invalidateApiFetchCache('/api/survey')
-      router.push('/admin/survey')
+      router.push('/questioner/survey')
       router.refresh()
     },
   })

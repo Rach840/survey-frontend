@@ -5,7 +5,7 @@ export const surveySchema = z
         title: z.string().trim().min(1, "Название — обязательное поле"),
         status: z.enum(["draft", "open", "closed", "archived"]),
         template_id: z.number(),
-        invitationMode: z.enum(["admin", "bot"]),
+        invitationMode: z.enum(["questioner", "bot"]),
         public_slug: z.string().trim().min(1, "Публичный slug обязателен"),
         participants: z.array(
             z.object({
@@ -18,7 +18,7 @@ export const surveySchema = z
         ends_at: z.string().trim().optional(),
     })
     .refine(
-        (d) => d.invitationMode === "admin" || d.participants.length === 0,
+        (d) => d.invitationMode === "questioner" || d.participants.length === 0,
         {
             message:
                 "Добавление участников вручную доступно только при ручном режиме. В иных режимах список участников должен быть пуст.",

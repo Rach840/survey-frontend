@@ -253,7 +253,7 @@ export default function SurveyParticipantsPage({ surveyId }: { surveyId: string 
         variants={fadeUpVariants}
         transition={fadeTransition}
       >
-        <Link href={`/admin/survey/${surveyId}`} className='text-sm text-gray-600 hover:text-gray-900'>
+        <Link href={`/questioner/survey/${surveyId}`} className='text-sm text-gray-600 hover:text-gray-900'>
           <span className='inline-flex items-center gap-2'>
             <ArrowLeft className='h-4 w-4' />
             Назад к анкете

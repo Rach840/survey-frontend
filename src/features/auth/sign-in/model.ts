@@ -1,7 +1,7 @@
 'use client'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { meKey } from '@/entities/user/model/meQuery'
+import {useMutation, useQueryClient} from '@tanstack/react-query'
+import {useRouter} from 'next/navigation'
+import {meKey} from '@/entities/user/model/meQuery'
 
 export function useSignIn() {
     const qc = useQueryClient()
@@ -22,7 +22,7 @@ export function useSignIn() {
             // куки установлены на сервере → обновим UI
             await qc.invalidateQueries({ queryKey: meKey })
             router.refresh()
-            router.push('/admin/survey')// очистка Router Cache и новый запрос к серверу
+            router.push('/questioner/survey')// очистка Router Cache и новый запрос к серверу
         },
     })
 }

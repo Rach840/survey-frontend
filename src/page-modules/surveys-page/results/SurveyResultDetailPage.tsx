@@ -190,7 +190,7 @@ export default function SurveyResultDetailPage({
             <CardContent className='space-y-3 p-6'>
               <CardTitle className='text-lg text-gray-900'>Ответ не найден</CardTitle>
               <CardDescription className='text-gray-600'>Проверьте ссылку или вернитесь к списку результатов.</CardDescription>
-              <Link href={`/admin/survey/${surveyId}/results`}>
+              <Link href={`/questioner/survey/${surveyId}/results`}>
                 <Button variant='outline' className='gap-2'>
                   <ArrowLeft className='h-4 w-4' />
                   Вернуться назад
@@ -212,7 +212,7 @@ export default function SurveyResultDetailPage({
         variants={fadeUpVariants}
         transition={fadeTransition}
       >
-        <Link href={`/admin/survey/${surveyId}/results`} className='text-sm text-gray-600 hover:text-gray-900'>
+        <Link href={`/questioner/survey/${surveyId}/results`} className='text-sm text-gray-600 hover:text-gray-900'>
           <span className='inline-flex items-center gap-2'>
             <ArrowLeft className='h-4 w-4' />
             Назад к результатам

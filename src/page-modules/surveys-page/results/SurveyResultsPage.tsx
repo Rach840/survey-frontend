@@ -103,7 +103,7 @@ const handleExport = useResultExcelExport(survey, allResults, setIsExporting)
         variants={fadeUpVariants}
         transition={fadeTransition}
       >
-        <Link href='/admin/survey' className='text-sm text-gray-600 hover:text-gray-900'>
+        <Link href='/(private)/questioner/survey' className='text-sm text-gray-600 hover:text-gray-900'>
           <span className='inline-flex items-center gap-2'>
             <ArrowLeft className='h-4 w-4' />
             Назад к анкетам
@@ -186,7 +186,7 @@ const handleExport = useResultExcelExport(survey, allResults, setIsExporting)
                           <TableCell className='px-4 py-3'>{formatDateTime(item.response.submitted_at)}</TableCell>
                           <TableCell className='px-4 py-3 text-right'>
                             <Button asChild size='sm' variant='outline'>
-                              <Link href={`/admin/survey/${surveyId}/results/${item.enrollment.id}`}>Просмотреть</Link>
+                              <Link href={`/questioner/survey/${surveyId}/results/${item.enrollment.id}`}>Просмотреть</Link>
                             </Button>
                           </TableCell>
                         </TableRow>

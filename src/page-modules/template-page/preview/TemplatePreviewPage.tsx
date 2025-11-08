@@ -105,7 +105,7 @@ export  default  function TemplatePreviewPage({ templateId }: TemplatePreviewPag
   return (
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
-        <Link href="/admin/templates" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+        <Link href="/(private)/questioner/templates" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" /> Назад к шаблонам
         </Link>
         <Button variant="ghost" size="icon" onClick={() => refetch()} disabled={isLoading}>
@@ -146,7 +146,7 @@ export  default  function TemplatePreviewPage({ templateId }: TemplatePreviewPag
                 </div>
               </div>
               <div className="flex flex-col items-stretch gap-2">
-                <Link href={`/admin/templates/${templateId}/edit`} className="w-full">
+                <Link href={`/questioner/templates/${templateId}/edit`} className="w-full">
                   <Button className="w-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#5558e3] hover:to-[#9333ea]">
                     Изменить шаблон
                   </Button>

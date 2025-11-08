@@ -31,7 +31,7 @@ export function ChangeForm({survey, editOpen,  setEditOpen}: { survey: Survey | 
         mode: "onChange",
         defaultValues: {
             title: survey?.title,
-            invitationMode: (survey?.mode as SurveyMode) ?? 'admin',
+            invitationMode: (survey?.mode as SurveyMode) ?? 'questioner',
             status: (survey?.status as SurveyStatus) ?? 'draft',
             max_participants: survey.max_participants,
             starts_at: toInputDateTime(survey?.starts_at),

@@ -83,7 +83,7 @@ export default function SurveyPage() {
           <h1 className='mb-2 text-3xl font-bold text-gray-900'>Панель администратора анкет</h1>
           <p className='text-gray-600'>Отслеживайте прогресс, управляйте анкетами и контролируйте экспорт результатов.</p>
         </div>
-        <Link href='/admin/survey/create'>
+        <Link href='/(private)/questioner/survey/create'>
           <Button variant='form' size='lg' className='gap-2 text-lg'>
             <Plus className='h-4 w-4' />
             Новая анкета

@@ -26,7 +26,7 @@ export interface SurveyParticipant {
   enrollment_id: number
   full_name: string
   email?: string
-  source: 'admin' | 'bot'
+  source: 'questioner' | 'bot'
   state: EnrollmentState
   responseState?: ResponseState | null
   progress: number

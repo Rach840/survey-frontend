@@ -9,7 +9,7 @@ export  default  function Home() {
     const router = useRouter()
     console.log(me)
     if (me){
-        router.replace('/admin/survey')
+        router.replace('/questioner/survey')
     }else  {
         router.replace('/login')
     }

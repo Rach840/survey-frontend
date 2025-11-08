@@ -132,7 +132,7 @@ export function MethodCard({ form, maxParticipants, participants, setParticipant
         <CardTitle>Приглашения участников</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs onValueChange={(v) => form.setValue('invitationMode', v as 'admin' | 'bot')}>
+        <Tabs onValueChange={(v) => form.setValue('invitationMode', v as 'questioner' | 'bot')}>
           <TabsList className='grid w-full grid-cols-2 mb-6'>
             <TabsTrigger value='admin' className='flex items-center gap-2'>
               <Users className='w-4 h-4' />
