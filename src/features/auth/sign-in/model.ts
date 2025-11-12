@@ -2,6 +2,7 @@
 import {useMutation, useQueryClient} from '@tanstack/react-query'
 import {useRouter} from 'next/navigation'
 import {meKey} from '@/entities/user/model/meQuery'
+import {toast} from "sonner";
 
 export function useSignIn() {
     const qc = useQueryClient()
@@ -15,6 +16,7 @@ export function useSignIn() {
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify(payload),
             })
+            if (r.status == 400) throw new Error('Пароль не верный')
             if (!r.ok) throw new Error('login failed')
             return r.json()
         },
@@ -24,5 +26,11 @@ export function useSignIn() {
             router.refresh()
             router.push('/questioner/survey')// очистка Router Cache и новый запрос к серверу
         },
+        onError: async (error) => {
+            await qc.invalidateQueries({ queryKey: meKey })
+            toast.error(
+            error.message
+            )
+        }
     })
 }

@@ -13,7 +13,7 @@ import {
     VisibilityState,
 } from "@tanstack/react-table"
 
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table"
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/shared/ui/table"
 import {
     Button,
     DropdownMenu,
@@ -23,6 +23,8 @@ import {
     Input
 } from "@/shared";
 import React from "react";
+import {PlusIcon} from "lucide-react";
+import RegisterDialog from "@/entities/user/ui/create-user";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
@@ -55,49 +57,63 @@ export function DataTable<TData, TValue>({
             columnVisibility,
         },
     })
-
+const headers = {
+    id: "ID",
+    full_name:"ФИО",
+    email: "Почта",
+    role: "Роль",
+    disabled_at:"Заблокирован",
+    "Редактировать": "Редактировать"
+}
     return (
-        <div>
-            <div className="flex items-center py-4">
+        <div className={"w"}>
+            <div className="flex items-center justify-between py-4">
                 <Input
                     placeholder="Фильтер..."
                     value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
                     onChange={(event) =>
                         table.getColumn("email")?.setFilterValue(event.target.value)
                     }
-                    className="max-w-sm"
+                    className="max-w-sm bg-gray-50"
                 />
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="ml-auto">
-                            Колонки
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {table
-                            .getAllColumns()
-                            .filter(
-                                (column) => column.getCanHide()
-                            )
-                            .map((column) => {
-                                return (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="capitalize"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) =>
-                                            column.toggleVisibility(!!value)
-                                        }
-                                    >
-                                        {column.id}
-                                    </DropdownMenuCheckboxItem>
+                <div className="space-x-4">
+                    <RegisterDialog>
+                        <Button variant={"form"}>Создать пользователя <PlusIcon/></Button>
+                    </RegisterDialog>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="ml-auto">
+                                Колонки
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {table
+                                .getAllColumns()
+                                .filter(
+                                    (column) => column.getCanHide()
                                 )
-                            })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                                .map((column) => {
+                                    return (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="capitalize"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                        >
+                                            {headers[column.id]}
+                                        </DropdownMenuCheckboxItem>
+                                    )
+                                })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
             </div>
         <div className="overflow-hidden mx-auto rounded-md border">
-            <Table>
+            <Table className={"bg-gray-50"}>
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
@@ -133,7 +149,7 @@ export function DataTable<TData, TValue>({
                     ) : (
                         <TableRow>
                             <TableCell colSpan={columns.length} className="h-24 text-center">
-                                No results.
+                                Не найдено.
                             </TableCell>
                         </TableRow>
                     )}

@@ -52,6 +52,11 @@ export const columns: ColumnDef<User>[] = [
                 </Button>
             )
         },
+        cell: ({ row }) => (
+        <p>
+            {row.getValue("role") == 'QUESTIONER' ? "Анкетирующий" : "Администратор"}
+        </p>
+        ),
     },
     {
         accessorKey: "disabled_at",
@@ -66,9 +71,15 @@ export const columns: ColumnDef<User>[] = [
                 </Button>
             )
         },
+        cell: ({ row }) => (
+            <p className={""}>
+                {row.getValue("disabled_at") ? "Да" : "Нет"}
+            </p>
+        ),
     },
     {
         accessorKey: "",
         header: "Редактировать",
     },
+
 ]

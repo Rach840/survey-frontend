@@ -8,7 +8,7 @@ export default  function UsersPage() {
     console.log(users)
 
     return (
-        <div className={" max-w-5xl text-black mx-auto"}>
+        <div className={" container text-black mx-auto"}>
             {
                 users?.length > 0 ? (
                     <DataTable columns={columns} data={users} />
